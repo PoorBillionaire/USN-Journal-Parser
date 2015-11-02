@@ -54,29 +54,41 @@ file_attributes = {
 
 
 def find_data(usnhandle, filesize):
-    # Taken and modified from Dave Lassalle's "parseusn.py"
+    # USN journals often start with large amounts of leading zeros before
+    # providing any data - this function returns a pointer to where the
+    # first USN journal record exists in the file
+    #
+    # Inspired by Dave Lassalle's "parseusn.py" - but mostly modified
     # https://github.com/sans-dfir/sift-files/blob/master/scripts/parseusn.py
 
-    if filesize >= 5368709120:
-        while True:
-            usnhandle.seek(1073741824, 1)
-            data = usnhandle.read(6553600)
-            data = data.lstrip("\x00")
+    while True:
+        data = usnhandle.read(6553600)
+        data = data.lstrip('\x00')
+        if data:
+            return usnhandle.tell() - len(data)
 
-            if data:
-                f.seek((-1073741824 + 6553600), 1)
-                while True:
-                    data = usnhandle.read(6553600)
-                    data = data.lstrip("\x00")
-                    if data:
-                        return usnhandle.tell() - len(data)
-    else:
-        while True:
-            data = usnhandle.read(6553600)
-            data = data.lstrip('\x00')
-            if data:
-                return usnhandle.tell() - len(data)
+def find_data_quick(usnhandle):
+    # In larger USN journals (20GB+), the journal file might lead with gigabytes
+    # and gigabytes of leading zeroes. This function essentially does the same as
+    # "find_data()"; however it iterates the file in 1GB chunks to start.
+    #
+    # WARNING: This function makes the assumption that once the USN records appear
+    # in the file, the zero bytes between records will never exceed 6553600 bytes.
+    # Though in my experience, this shouldn't be an issue. I have never seen or heard
+    # of that much space between two records
 
+    while True:
+        usnhandle.seek(1073741824, 1)
+        data = usnhandle.read(6553600)
+        data = data.lstrip("\x00")
+
+        if data:
+            f.seek((-1073741824 + 6553600), 1)
+            while True:
+                data = usnhandle.read(6553600)
+                data = data.lstrip("\x00")
+                if data:
+                    return usnhandle.tell() - len(data)
 
 
 
@@ -206,8 +218,13 @@ if not os.path.exists(args.journal):
 
 with open(args.journal, "rb") as f:
     fsize = os.path.getsize(args.journal)
-    datapointer = find_data(f, fsize)
-    f.seek(datapointer)
+
+    if args.quick:
+        datapointer = find_data_quick(f)
+        f.seek(datapointer)
+    else:
+        data pointer = find_data(f)
+        f.seek(datapointer)
 
     if args.verbose:
         while f.tell() < fsize:
