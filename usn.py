@@ -83,20 +83,26 @@ def find_data_quick(usnhandle, journalsize):
                  "--quick functionality\n[ - ] Exitting...")
 
     while True:
-        usnhandle.seek(1073741824, 1)
-        data = usnhandle.read(6553600)
-        data = data.lstrip("\x00")
+        if usnhandle.tell() + 1073741824 < journalsize:
+            usnhandle.seek(1073741824, 1)
+            data = usnhandle.read(6553600)
+            data = data.lstrip("\x00")
 
-        if data:
-            f.seek((-1073741824 + 6553600), 1)
-            
+            if data:
+                usnhandle.seek((-1073741824 + 6553600), 1)
+
+                while True:
+                    data = usnhandle.read(6553600)
+                    data = data.lstrip("\x00")
+                    if data:
+                        return usnhandle.tell() - len(data)
+        else:
             while True:
                 data = usnhandle.read(6553600)
                 data = data.lstrip("\x00")
                 if data:
                     return usnhandle.tell() - len(data)
-
-
+                
 def convert_timestamp(timestamp):
     # The USN record's "timestamp" property is a Win32 FILETIME value
     # This function returns that value in a human-readable format
@@ -154,11 +160,11 @@ def validate_record(usnhandle, journalsize):
     while True:
         try:
             recordlen = struct.unpack_from("I", usnhandle.read(4))[0]
+            usnhandle.seek(-4, 1)
         except Exception, e:
             if (struct.error) and (f.tell() == journalsize):
                     sys.exit()
 
-        usnhandle.seek(-4, 1)
         if recordlen:
             nextrecord = (usnhandle.tell() + recordlen)
             return [recordlen, nextrecord]
