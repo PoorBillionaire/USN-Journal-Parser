@@ -131,7 +131,7 @@ One of the main pain points when reviewing a USN journal is its size. These file
 
 Using an interpreted language such as Perl or Python to do this searching can be extremely time consuming if an Analyst is staring at a 40GB journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly, by jumping ahead a gigabyte at a time looking for data.
 
-**Warning: This logic does make some assumptions abou the data in question and could use more testing. If you are experiencing issues using this functionality just switch back to using usn.py without the --quick flag. I am adjusting its logic every chance I can to make it more helpful/accurate. 
+**Warning: This logic does make some assumptions abou the data in question and could use more testing. If you are experiencing issues using this functionality just switch back to using usn.py without the --quick flag. I am adjusting its logic every chance I can to make it more helpful/accurate.**
 
 Below is an example of the time it takes to find valid data in a large USN journal - 39GB in size. This example is not using the --quick functionality and takes over six minutes to even begin parsing data:
 
