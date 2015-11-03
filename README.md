@@ -25,9 +25,23 @@ optional arguments:
   -c, --csv             Return USN records in comma-separated format
   -f FILENAME, --filename FILENAME
                         Returns USN record matching a given filename
+  -i, --info            Returns information about the USN Journal file itself
   -l LAST, --last LAST  Return all USN records for the last n days
   -q, --quick           Parse a large journal file quickly
   -v, --verbose         Return all USN properties
+```
+
+####--info
+
+The USN Journal is kind of a weird file. A large-ish USN change journal can contain gigabytes and gigabytes of leading NULL bytes. Sometimes a large journal file doesn't even contain that many USN records. Using the --info / -i switch prints high-level information about the USN journal itself. This is mostly just because I'm amused when I find a 55GB file comprised of over 99% NULL bytes:
+
+```
+dev@computer:~$python usn.py usnJRNL --info
+[ + ] File size (bytes): 57118079632
+[ + ] Leading null bytes consume ~99% of the journal file
+[ + ] Pointer to first USN record: 57082904576
+[ + ] Timestamp on first USN record: 2015-10-09 21:37:58.836242
+
 ```
 
 ####--csv
