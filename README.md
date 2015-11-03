@@ -7,7 +7,7 @@ The NTFS USN journal is a volume-specific file which essentially logs changes to
 usn.py is a script written in Python which parses the journal - and has what I consider to be a couple of unique features.
 
 ####Default Output
-With no command-line options set, usn.py will produce print the output below to stdout:
+With no command-line options set, usn.py will produce USN journal records in the format below:
 
 ```
 dev@computer:$ python usn.py usnJRNL
