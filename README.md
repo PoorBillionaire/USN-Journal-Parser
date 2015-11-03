@@ -159,3 +159,17 @@ TotalMinutes      : 0.0470407583333333
 TotalSeconds      : 2.8224455
 TotalMilliseconds : 2822.4455
 ```
+
+###Python Requirements
+
+* argparse
+* collections
+* datetime
+* json
+* os
+* struct
+* sys
+
+###To-Do
+
+- [ ] Enable --csv / -c to work with all other flags, not just with --quick / -q
