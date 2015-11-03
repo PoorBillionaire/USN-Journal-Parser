@@ -53,7 +53,7 @@ file_attributes = {
 
 
 
-def find_data(usnhandle, filesize):
+def find_data(usnhandle):
     # USN journals often start with large amounts of leading zeros before
     # providing any data - this function returns a pointer to where the
     # first USN journal record exists in the file
@@ -67,7 +67,8 @@ def find_data(usnhandle, filesize):
         if data:
             return usnhandle.tell() - len(data)
 
-def find_data_quick(usnhandle):
+
+def find_data_quick(usnhandle, journalsize):
     # In larger USN journals (20GB+), the journal file might lead with gigabytes
     # and gigabytes of leading zeroes. This function essentially does the same as
     # "find_data()"; however it iterates the file in 1GB chunks to start.
@@ -77,6 +78,10 @@ def find_data_quick(usnhandle):
     # Though in my experience, this shouldn't be an issue. I have never seen or heard
     # of that much space between two records
 
+    if journalsize < 1073741824:
+        sys.exit("[ - ] This USN journal is not large enough for the " \
+                 "--quick functionality\n[ - ] Exitting...")
+
     while True:
         usnhandle.seek(1073741824, 1)
         data = usnhandle.read(6553600)
@@ -84,12 +89,12 @@ def find_data_quick(usnhandle):
 
         if data:
             f.seek((-1073741824 + 6553600), 1)
+            
             while True:
                 data = usnhandle.read(6553600)
                 data = data.lstrip("\x00")
                 if data:
                     return usnhandle.tell() - len(data)
-
 
 
 def convert_timestamp(timestamp):
@@ -117,8 +122,9 @@ def convert_reason(reason):
 
     return formatted
 
+
 def convert_attributes(fileattribute):
-    # Returns the file attributes property in a human-readable format
+    # Returns the USN 'file attributes' property in a human-readable format
 
     attrlist = []
     formatted = ''
@@ -135,63 +141,83 @@ def convert_attributes(fileattribute):
     return formatted
 
 
-def parse_usn(usnhandle):
-    # Returns a dict object containing the USN structure's properties
+def validate_record(usnhandle, journalsize):
+    # This function determines the recordlength of a USN record by
+    # interpreting its first four bytes. This value is returned.
+    #
+    # Using the recordlength, it then calculates the start of the next
+    # valid USN record. This value is also returned
+    #
+    # The reason this functionality is broken out, is because the 
+    # parse_usn function below was getting bloated and ugly/unreadable
 
-    recordlen = struct.unpack_from("I", usnhandle.read(4))[0]
-
-    if recordlen:
-        nextrecord = (f.tell() - 4) + recordlen
-        f.seek(-4, 1)
-        usnrecord = collections.OrderedDict()
-        usnrecord["recordlen"] = struct.unpack_from("I", usnhandle.read(4))[0]
-        usnrecord["majversion"] = struct.unpack_from("h", usnhandle.read(2))[0]
-        usnrecord["minversion"] = struct.unpack_from("h", usnhandle.read(2))[0]
-
-        if usnrecord["majversion"] == 2:
-            usnrecord["fileref"] = struct.unpack_from("q", usnhandle.read(8))[0]
-            usnrecord["pfilerefef"] = struct.unpack_from("q", usnhandle.read(8))[0]
-
-        elif usnrecord["majversion"] == 3:
-            usnrecord["filerefer"] = struct.unpack_from("2q", usnhandle.read(16))[0]
-            usnrecord["pfileref"] = struct.unpack_from("2q", usnhandle.read(16))[0]
-        else:
-            sys.exit("[ - ] Unknown USN record version at {}".format(f.tell() - 4))
-
-        usnrecord["usn"] = struct.unpack_from("q", usnhandle.read(8))[0]
-        usnrecord["timestamp"] = struct.unpack_from("q", usnhandle.read(8))[0]
-        usnrecord["reason"] = struct.unpack_from("I", usnhandle.read(4))[0]
-        usnrecord["sourceinfo"] = struct.unpack_from("i", usnhandle.read(4))[0]
-        usnrecord["sid"] = struct.unpack_from("I", usnhandle.read(4))[0]
-        usnrecord["fileattr"] = struct.unpack_from("I", usnhandle.read(4))[0]
-        usnrecord["filenamelen"] = struct.unpack_from("h", usnhandle.read(2))[0]
-        usnrecord["filenameoffset"] = struct.unpack_from("h", usnhandle.read(2))[0]
-        usnrecord["filename"] = struct.unpack("{}s".format(usnrecord["filenamelen"]), usnhandle.read(usnrecord["filenamelen"]))[0]
-
-        usnrecord["filename"] = usnrecord["filename"].replace("\x00", "")
-        usnrecord["fileattr"] = convert_attributes(usnrecord["fileattr"])
-        usnrecord["reason"] = convert_reason(usnrecord["reason"])
-        usnrecord["timestamp"] = convert_timestamp(usnrecord["timestamp"])
-
-        usnhandle.seek(nextrecord)
-        if usnrecord:
-            return usnrecord
-
-    else:
-        usnhandle.seek(-4, 1)
+    while True:
         try:
-            while not struct.unpack_from("I", usnhandle.read(4))[0]:
-                continue
+            recordlen = struct.unpack_from("I", usnhandle.read(4))[0]
         except Exception, e:
-            if struct.error:
-                if f.tell() == fsize:
+            if (struct.error) and (f.tell() == journalsize):
                     sys.exit()
+
         usnhandle.seek(-4, 1)
+        if recordlen:
+            nextrecord = (usnhandle.tell() + recordlen)
+            return [recordlen, nextrecord]
+        else:
+             try:
+                 while not struct.unpack_from("I", usnhandle.read(4))[0]:
+                    continue
+             except Exception, e:
+                 if (struct.error) and (f.tell() == journalsize):
+                     sys.exit()
+
+        usnhandle.seek(-4, 1)
+        continue
+
+
+def parse_usn(usnhandle, recordlen, nextrecord):
+    # Returns a dict object containing the USN structure's properties
+    #
+    # This function is an eyesore - I would like to split a couple
+    # pieces of its functionality out at some point
+
+    usnrecord = collections.OrderedDict()
+    usnrecord["recordlen"] = struct.unpack_from("I", usnhandle.read(4))[0]
+    usnrecord["majversion"] = struct.unpack_from("h", usnhandle.read(2))[0]
+    usnrecord["minversion"] = struct.unpack_from("h", usnhandle.read(2))[0]
+
+    if usnrecord["majversion"] == 2:
+        usnrecord["fileref"] = struct.unpack_from("q", usnhandle.read(8))[0]
+        usnrecord["pfilerefef"] = struct.unpack_from("q", usnhandle.read(8))[0]
+
+    elif usnrecord["majversion"] == 3:
+        usnrecord["filerefer"] = struct.unpack_from("2q", usnhandle.read(16))[0]
+        usnrecord["pfileref"] = struct.unpack_from("2q", usnhandle.read(16))[0]
+    else:
+        sys.exit("[ - ] Unknown USN record version at {}".format(f.tell() - 4))
+
+    usnrecord["usn"] = struct.unpack_from("q", usnhandle.read(8))[0]
+    usnrecord["timestamp"] = struct.unpack_from("q", usnhandle.read(8))[0]
+    usnrecord["reason"] = struct.unpack_from("I", usnhandle.read(4))[0]
+    usnrecord["sourceinfo"] = struct.unpack_from("i", usnhandle.read(4))[0]
+    usnrecord["sid"] = struct.unpack_from("I", usnhandle.read(4))[0]
+    usnrecord["fileattr"] = struct.unpack_from("I", usnhandle.read(4))[0]
+    usnrecord["filenamelen"] = struct.unpack_from("h", usnhandle.read(2))[0]
+    usnrecord["filenameoffset"] = struct.unpack_from("h", usnhandle.read(2))[0]
+    usnrecord["filename"] = struct.unpack("{}s".format(usnrecord["filenamelen"]), usnhandle.read(usnrecord["filenamelen"]))[0]
+
+    usnrecord["filename"] = usnrecord["filename"].replace("\x00", "")
+    usnrecord["fileattr"] = convert_attributes(usnrecord["fileattr"])
+    usnrecord["reason"] = convert_reason(usnrecord["reason"])
+    usnrecord["timestamp"] = convert_timestamp(usnrecord["timestamp"])
+
+    usnhandle.seek(nextrecord)
+    if usnrecord:
+        return usnrecord
 
 def daysago(n):
     # Return a list of dates between today and n days ago
     # The dates have been truncated for string searches in
-    # the USN records
+    # the USN records when the "--last" CLI option is invoked
     
     dates = []
     counter = 0
@@ -210,6 +236,7 @@ p.add_argument("journal", help="Parse the specified USN journal")
 p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
 p.add_argument("-f", "--filename", help="Returns USN record matching a given filename")
 p.add_argument("-l", "--last", help="Return all USN records for the last n days")
+p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
 p.add_argument("-v", "--verbose", help="Return all USN properties", action="store_true")
 args = p.parse_args()
 
@@ -220,52 +247,43 @@ with open(args.journal, "rb") as f:
     fsize = os.path.getsize(args.journal)
 
     if args.quick:
-        datapointer = find_data_quick(f)
+        datapointer = find_data_quick(f, fsize)
         f.seek(datapointer)
     else:
-        data pointer = find_data(f)
+        datapointer = find_data(f)
         f.seek(datapointer)
 
     if args.verbose:
-        while f.tell() < fsize:
-            usn = parse_usn(f)
-            print json.dumps(parse_usn(f), indent=4)
+        while True:
+            recordlength, nextrecord = validate_record(f, fsize)
+            usn = parse_usn(f, recordlength, nextrecord)
+            print json.dumps(usn, indent=4)
 
     elif args.filename:
-        while f.tell() < fsize:
-            usn = parse_usn(f)
+        while True:
+            recordlength, nextrecord = validate_record(f, fsize)
+            usn = parse_usn(f, recordlength, nextrecord)
             if args.filename.lower() in usn["filename"].lower():
                 print json.dumps(usn, indent=4)
 
     elif args.last:
-        while f.tell() < fsize:
+        while True:
             dates = daysago(args.last)
-            usn = parse_usn(f)
+            recordlength, nextrecord = validate_record(f, fsize)
+            usn = parse_usn(f, recordlength, nextrecord)
             if usn["timestamp"][0:10] in dates:
                 print json.dumps(usn, indent=4)
 
     elif args.csv:
         print "timestamp,filename,fileattr,reason"
-        while f.tell() < fsize:
-            usn = parse_usn(f)
+        while True:
+            recordlength, nextrecord = validate_record(f, fsize)
+            usn = parse_usn(f, recordlength, nextrecord)
             print "{},{},{},{}".format(usn["timestamp"], usn["filename"], usn["fileattr"], usn["reason"])
                 
 
     else:
-        while f.tell() < fsize:
-            usn = parse_usn(f)
+        while True:
+            recordlength, nextrecord = validate_record(f, fsize)
+            usn = parse_usn(f, recordlength, nextrecord )
             print "{} | {} | {}\n".format(usn["timestamp"], usn["filename"], usn["reason"])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
