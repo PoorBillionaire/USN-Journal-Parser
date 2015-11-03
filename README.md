@@ -32,9 +32,14 @@ optional arguments:
 
 ####--csv
 
-Using the CSV flag will, as expected, provide results in CSV format. For now, using the --csv / -c option will provide just the timestamp of the change, the name of the file which has been changed, the changed file's file attributes, and the reason for the change that occurred. At this point the --csv flag cannot be combined with any other flag other than --quick which I will detail later. That will be changed soon as I want --csv capability for any data returned.
+Using the CSV flag will, as expected, provide results in CSV format. For now, using the --csv / -c option will provide:
 
-An example of what this looks like is below
+* Timestamp of the change
+* Name of the file which has been changed
+* Changed file's file attributes
+* Reason for the change that occurred
+
+At this point the --csv flag cannot be combined with any other flag other than --quick which I will detail later. That will be changed soon as I want --csv capability for any data returned. An example of what this looks like is below:
 
 ```
 dev@computer:~$python usn.py usnJRNL --csv
