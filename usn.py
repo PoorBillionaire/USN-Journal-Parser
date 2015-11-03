@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 import collections
 from datetime import datetime,timedelta
 import json
+import math
 import os
 import struct
 import sys
@@ -241,6 +242,7 @@ p = ArgumentParser()
 p.add_argument("journal", help="Parse the specified USN journal")
 p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
 p.add_argument("-f", "--filename", help="Returns USN record matching a given filename")
+p.add_argument("-i", "--info", help="Returns information about the USN Journal file itself", action="store_true")
 p.add_argument("-l", "--last", help="Return all USN records for the last n days")
 p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
 p.add_argument("-v", "--verbose", help="Return all USN properties", action="store_true")
@@ -259,7 +261,18 @@ with open(args.journal, "rb") as f:
         datapointer = find_data(f)
         f.seek(datapointer)
 
-    if args.verbose:
+    if args.info:
+        recordlength, nextrecord = validate_record(f, fsize)
+        percentage = str(float(datapointer)/fsize)
+        f.seek(datapointer)
+        firstrecord = parse_usn(f, recordlength, nextrecord)
+        
+        print "[ + ] File size (bytes): {}".format(fsize)
+        print "[ + ] Leading null bytes consume ~{}% of the journal file".format(percentage[2:4])
+        print "[ + ] Pointer to first USN record: {}".format(datapointer)
+        print "[ + ] Timestamp on first USN record: {}".format(firstrecord["timestamp"])
+
+    elif args.verbose:
         while True:
             recordlength, nextrecord = validate_record(f, fsize)
             usn = parse_usn(f, recordlength, nextrecord)
