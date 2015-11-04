@@ -33,7 +33,7 @@ optional arguments:
 
 ####--info
 
-The USN Journal is kind of a weird file. A large-ish USN change journal can contain gigabytes and gigabytes of leading NULL bytes. Sometimes a large journal file doesn't even contain that many USN records. Using the --info / -i switch prints high-level information about the USN journal itself. This is mostly just because I'm amused when I find a 55GB file comprised of over 99% NULL bytes:
+The USN Journal is kind of a weird file. A large-ish USN change journal can contain gigabytes and gigabytes of leading NULL bytes. Sometimes a large journal file doesn't even contain that many USN records. Using the --info / -i switch prints high-level information about the USN journal itself.
 
 ```
 dev@computer:~$python usn.py usnJRNL --info
