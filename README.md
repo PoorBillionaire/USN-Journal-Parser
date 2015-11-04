@@ -44,6 +44,47 @@ dev@computer:~$python usn.py usnJRNL --info
 
 ```
 
+####--quick
+Speaking of the USN Journal being kind of a weird file - IMO, a major pain point when parsing a USN journal is its filesize. These files can easily scale over 20GB. Additionally, often times the journal is comprised of a large amount of leading \x00 values. Often times 90% of the file is comprised of leading null bytes - this means the script needs to first search for and find the actual data before it can begin parsing USN records.
+
+Using an interpreted language such as Perl or Python to do this initial searching can be extremely time consuming if an Analyst is staring at a journal journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly: by jumping ahead a gigabyte at a time looking for data.
+
+**Warning: This logic does make some assumptions abou the data in question and could use more testing. If you are experiencing issues using this functionality just switch back to using usn.py without the --quick flag. I am adjusting its logic every chance I can to make it more helpful/accurate.**
+
+Below is an example of the time it takes to find valid data in a large USN journal - 39GB in size. This example is not using the --quick functionality and takes over six minutes to even begin parsing data:
+
+```
+PS Dev:\Desktop> Measure-Command {C:\Python27\python.exe usn.py usnJRNL}
+
+Hours             : 0
+Minutes           : 6
+Seconds           : 3
+Milliseconds      : 766
+Ticks             : 3637662181
+TotalDays         : 0.00421025715393519
+TotalHours        : 0.101046171694444
+TotalMinutes      : 6.06277030166667
+TotalSeconds      : 363.7662181
+TotalMilliseconds : 363766.2181
+```
+
+Now the same USN journal file, but with the --quick flag invoked. The time it takes to find data is cut down to just under three seconds:
+
+```
+PS Dev:\Desktop> Measure-Command {C:\Python27\python.exe usn.py usnJRNL --quick}
+
+Hours             : 0
+Minutes           : 0
+Seconds           : 2
+Milliseconds      : 822
+Ticks             : 28224455
+TotalDays         : 3.2667193287037E-05
+TotalHours        : 0.000784012638888889
+TotalMinutes      : 0.0470407583333333
+TotalSeconds      : 2.8224455
+TotalMilliseconds : 2822.4455
+```
+
 ####--csv
 
 Using the CSV flag will, as expected, provide results in CSV format. For now, using the --csv / -c option will provide:
@@ -53,7 +94,7 @@ Using the CSV flag will, as expected, provide results in CSV format. For now, us
 * Changed file's file attributes
 * Reason for the change that occurred
 
-At this point the --csv flag cannot be combined with any other flag other than --quick which I will detail later. That will be changed soon as I want --csv capability for any data returned. An example of what this looks like is below:
+At this point the --csv flag cannot be combined with any other flag other than --quick. That should change soon, as I want --csv capability for any data returned. An example of what this looks like is below:
 
 ```
 dev@computer:~$python usn.py usnJRNL --csv
@@ -90,7 +131,7 @@ dev@computer:~$python usn.py usnJRNL --verbose
 ```
 
 ####--filename
-Sometimes during a more targeted investigation, an Analyst is simply looking for additional supporting evidence to confirm what is believed and does not want to eyeball the entire journal for this evidence. By using the 'filename' command-line flag, an Analyst can return only USN records which contain the given string in its 'filename' attribute:
+Sometimes during a more targeted investigation, an Analyst is simply looking for additional supporting evidence to confirm what is believed or pile on to what is already known - and does not want to eyeball the entire journal for this evidence. By using the 'filename' command-line flag, an Analyst can return only USN records which contain the given string in its 'filename' attribute:
 
 ```
 dev@computer:~$ python usn.py usnJRNL --filename jernuhl
@@ -138,47 +179,6 @@ dev@computer:~$ python usn.py usnJRNL --last 7
 ...
 ...
 ...
-```
-
-####--quick
-One of the main pain points when reviewing a USN journal is its size. These files can easily scale over 20GB. Additionally, often times the USN journal file is comprised of a large amount of leading \x00 values. In many cases 90% of the file is an arbitrary number of null bytes - this means our script needs to first search for and find the actual data before it can begin parsing properly.
-
-Using an interpreted language such as Perl or Python to do this searching can be extremely time consuming if an Analyst is staring at a 40GB journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly, by jumping ahead a gigabyte at a time looking for data.
-
-**Warning: This logic does make some assumptions abou the data in question and could use more testing. If you are experiencing issues using this functionality just switch back to using usn.py without the --quick flag. I am adjusting its logic every chance I can to make it more helpful/accurate.**
-
-Below is an example of the time it takes to find valid data in a large USN journal - 39GB in size. This example is not using the --quick functionality and takes over six minutes to even begin parsing data:
-
-```
-PS Dev:\Desktop> Measure-Command {C:\Python27\python.exe usn.py usnJRNL}
-
-Hours             : 0
-Minutes           : 6
-Seconds           : 3
-Milliseconds      : 766
-Ticks             : 3637662181
-TotalDays         : 0.00421025715393519
-TotalHours        : 0.101046171694444
-TotalMinutes      : 6.06277030166667
-TotalSeconds      : 363.7662181
-TotalMilliseconds : 363766.2181
-```
-
-Now the same USN journal file, but with the --quick flag invoked. The time it takes to find data is cut down to just under three seconds:
-
-```
-PS Dev:\Desktop> Measure-Command {C:\Python27\python.exe usn.py usnJRNL --quick}
-
-Hours             : 0
-Minutes           : 0
-Seconds           : 2
-Milliseconds      : 822
-Ticks             : 28224455
-TotalDays         : 3.2667193287037E-05
-TotalHours        : 0.000784012638888889
-TotalMinutes      : 0.0470407583333333
-TotalSeconds      : 2.8224455
-TotalMilliseconds : 2822.4455
 ```
 
 ###Python Requirements
