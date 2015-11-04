@@ -8,7 +8,8 @@ import struct
 import sys
 
 
-usn_reasons = {
+usn_reasons = collections.OrderedDict(
+              {
                0x1 : "DATA_OVERWRITE",
                0x2 : "DATA_EXTEND",
                0x4 : "DATA_TRUNCATION",
@@ -30,9 +31,11 @@ usn_reasons = {
                0x100000 : "REPARSE_POINT_CHANGE",
                0x200000 : "STREAM_CHANGE",
                0x80000000 : "CLOSE"
-}
+              }
+)
 
-file_attributes = {
+file_attributes = collections.OrderedDict(
+                  {
                    0x1 : "READONLY",
                    0x2 : "HIDDEN",
                    0x4 : "SYSTEM",
@@ -50,8 +53,24 @@ file_attributes = {
                    0x8000 : "INTEGRITY_STREAM",
                    0x10000 : "VIRTUAL",
                    0x20000 : "NO_SCRUB_DATA"
-}
+                  }
+)
 
+
+def convert_word(twobytes):
+    return struct.unpack_from("H", twobytes)[0]
+
+
+def convert_dword(fourbytes):
+    return struct.unpack_from("I", fourbytes)[0]
+
+
+def convert_dwordlong(eightbytes):
+    return struct.unpack_from("Q", eightbytes)[0]
+
+
+def convert_double_dwordlong(sixteenbytes):
+    return struct.unpack_from("Q", sixteenbytes)[0]
 
 
 def find_data(usnhandle):
@@ -103,7 +122,8 @@ def find_data_quick(usnhandle, journalsize):
                 data = data.lstrip("\x00")
                 if data:
                     return usnhandle.tell() - len(data)
-                
+
+
 def convert_timestamp(timestamp):
     # The USN record's "timestamp" property is a Win32 FILETIME value
     # This function returns that value in a human-readable format
@@ -188,29 +208,30 @@ def parse_usn(usnhandle, recordlen, nextrecord):
     # pieces of its functionality out at some point
 
     usnrecord = collections.OrderedDict()
-    usnrecord["recordlen"] = struct.unpack_from("I", usnhandle.read(4))[0]
-    usnrecord["majversion"] = struct.unpack_from("h", usnhandle.read(2))[0]
-    usnrecord["minversion"] = struct.unpack_from("h", usnhandle.read(2))[0]
+    usnrecord["recordlen"] = convert_dword(usnhandle.read(4))
+    usnrecord["majversion"] = convert_word(usnhandle.read(2))
+    usnrecord["minversion"] = convert_word(usnhandle.read(2))
 
     if usnrecord["majversion"] == 2:
-        usnrecord["fileref"] = struct.unpack_from("q", usnhandle.read(8))[0]
-        usnrecord["pfilerefef"] = struct.unpack_from("q", usnhandle.read(8))[0]
+        usnrecord["fileref"] = convert_dwordlong(usnhandle.read(8))
+        usnrecord["pfilerefef"] = convert_dwordlong(usnhandle.read(8))
 
     elif usnrecord["majversion"] == 3:
-        usnrecord["filerefer"] = struct.unpack_from("2q", usnhandle.read(16))[0]
-        usnrecord["pfileref"] = struct.unpack_from("2q", usnhandle.read(16))[0]
+        usnrecord["filerefer"] = convert_double_dwordlong(usnhandle.read(16))
+        usnrecord["pfileref"] = convert_double_dwordlong(usnhandle.read(16))
     else:
         sys.exit("[ - ] Unknown USN record version at {}".format(f.tell() - 4))
 
-    usnrecord["usn"] = struct.unpack_from("q", usnhandle.read(8))[0]
-    usnrecord["timestamp"] = struct.unpack_from("q", usnhandle.read(8))[0]
-    usnrecord["reason"] = struct.unpack_from("I", usnhandle.read(4))[0]
-    usnrecord["sourceinfo"] = struct.unpack_from("i", usnhandle.read(4))[0]
-    usnrecord["sid"] = struct.unpack_from("I", usnhandle.read(4))[0]
-    usnrecord["fileattr"] = struct.unpack_from("I", usnhandle.read(4))[0]
-    usnrecord["filenamelen"] = struct.unpack_from("h", usnhandle.read(2))[0]
-    usnrecord["filenameoffset"] = struct.unpack_from("h", usnhandle.read(2))[0]
-    usnrecord["filename"] = struct.unpack("{}s".format(usnrecord["filenamelen"]), usnhandle.read(usnrecord["filenamelen"]))[0]
+    usnrecord["usn"] = convert_dwordlong(usnhandle.read(8))
+    usnrecord["timestamp"] = convert_dwordlong(usnhandle.read(8))
+    usnrecord["reason"] = convert_dword(usnhandle.read(4))
+    usnrecord["sourceinfo"] = convert_dword(usnhandle.read(4))
+    usnrecord["sid"] = convert_dword(usnhandle.read(4))
+    usnrecord["fileattr"] = convert_dword(usnhandle.read(4))
+    usnrecord["filenamelen"] = convert_word(usnhandle.read(2))
+    usnrecord["filenameoffset"] = convert_word(usnhandle.read(2))
+    usnrecord["filename"] = struct.unpack("{}s".format(usnrecord["filenamelen"]),
+                                    usnhandle.read(usnrecord["filenamelen"]))[0]
 
     usnrecord["filename"] = usnrecord["filename"].replace("\x00", "")
     usnrecord["fileattr"] = convert_attributes(usnrecord["fileattr"])
@@ -220,6 +241,7 @@ def parse_usn(usnhandle, recordlen, nextrecord):
     usnhandle.seek(nextrecord)
     if usnrecord:
         return usnrecord
+
 
 def daysago(n):
     # Return a list of dates between today and n days ago
