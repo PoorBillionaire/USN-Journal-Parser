@@ -95,10 +95,10 @@ TotalMilliseconds : 2822.4455
 
 Using the CSV flag will, as expected, provide results in CSV format. For now, using the --csv / -c option will provide:
 
-* Timestamp of the change
-* Name of the file which has been changed
-* Changed file's file attributes
-* Reason for the change that occurred
+* Timestamp
+* Filename
+* File attributes
+* Reason
 
 At this point the --csv flag cannot be combined with any other flag other than --quick. That should change soon, as I want --csv capability for any data returned. An example of what this looks like is below:
 
