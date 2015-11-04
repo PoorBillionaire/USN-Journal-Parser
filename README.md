@@ -33,7 +33,7 @@ optional arguments:
 
 ####--info
 
-The USN Journal is kind of a weird file. A large-ish USN change journal can contain gigabytes and gigabytes of leading NULL bytes. Sometimes a large journal file doesn't even contain that many USN records. Using the --info / -i switch prints high-level information about the USN journal itself.
+The USN Journal is a ([Sparse File]https://msdn.microsoft.com/en-us/library/windows/desktop/aa365564(v=vs.85).aspx). A large-ish USN change journal can contain gigabytes and gigabytes of leading NULL bytes. Sometimes a large journal file doesn't even contain that many USN records. Using the --info / -i switch prints high-level information about the USN journal itself.
 
 ```
 dev@computer:~$python usn.py usnJRNL --info
@@ -47,9 +47,9 @@ dev@computer:~$python usn.py usnJRNL --info
 ####--quick
 **Warning: This logic does make some assumptions abou the data in question and could use more testing. If you are experiencing issues using this functionality just switch back to using usn.py without the --quick flag. I am adjusting its logic every chance I can to make it more helpful/accurate.**
 
-Speaking of the USN Journal being kind of a weird file - IMO, a major pain point when parsing a USN journal is its filesize. These files can easily scale over 20GB, comprised of a large amount of leading \x00 values. This means the script needs to first search for and find the first USN record before it can begin producing results.
+Speaking of the USN Journal being a Sparse File - IMO, a major pain point when parsing a USN journal is its size on disk. These files can easily scale over 20GB, comprised of a large amount of leading \x00 values. This means the script needs to 'hunt' for and find the first USN record before it can begin producing results.
 
-Using an interpreted language such as Perl or Python to do this initial searching can be extremely time consuming if an Analyst is working with a larger journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly: by jumping ahead a gigabyte at a time looking for data. Jumping ahead one gigabyte at a time requires the journal in question to be at least one gigabyte in size. If it isn't, the script will simply produce an error and exit:
+Using an interpreted language such as Perl or Python to do this initial hunting can be extremely time consuming if an Analyst is working with a larger journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly: by jumping ahead a gigabyte at a time looking for data. Jumping ahead one gigabyte at a time requires the journal in question to be at least one gigabyte in size. If it isn't, the script will simply produce an error and exit:
 
 ```
 dev@computer$ python usn.py usnJRNL --quick
