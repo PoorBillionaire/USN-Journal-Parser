@@ -33,7 +33,7 @@ optional arguments:
 
 ####--info
 
-The USN Journal is a ([Sparse File]https://msdn.microsoft.com/en-us/library/windows/desktop/aa365564(v=vs.85).aspx). A large-ish USN change journal can contain gigabytes and gigabytes of leading NULL bytes. Sometimes a large journal file doesn't even contain that many USN records. Using the --info / -i switch prints high-level information about the USN journal itself.
+The USN Journal is a [Sparse File](https://msdn.microsoft.com/en-us/library/windows/desktop/aa365564(v=vs.85).aspx). A large-ish USN change journal can contain gigabytes and gigabytes of leading NULL bytes. Sometimes a large journal file doesn't even contain that many USN records. Using the --info / -i switch prints high-level information about the USN journal itself.
 
 ```
 dev@computer:~$python usn.py usnJRNL --info
