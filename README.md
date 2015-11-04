@@ -45,9 +45,9 @@ dev@computer:~$python usn.py usnJRNL --info
 ```
 
 ####--quick
-Speaking of the USN Journal being kind of a weird file - IMO, a major pain point when parsing a USN journal is its filesize. These files can easily scale over 20GB. Additionally, often times the journal is comprised of a large amount of leading \x00 values. Often times 90% of the file is comprised of leading null bytes - this means the script needs to first search for and find the actual data before it can begin parsing USN records.
+Speaking of the USN Journal being kind of a weird file - IMO, a major pain point when parsing a USN journal is its filesize. These files can easily scale over 20GB, comprised of a large amount of leading \x00 values. This means the script needs to first search for and find the first USN record before it can begin producing results.
 
-Using an interpreted language such as Perl or Python to do this initial searching can be extremely time consuming if an Analyst is staring at a journal journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly: by jumping ahead a gigabyte at a time looking for data.
+Using an interpreted language such as Perl or Python to do this initial searching can be extremely time consuming if an Analyst is working with a larger journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly: by jumping ahead a gigabyte at a time looking for data.
 
 **Warning: This logic does make some assumptions abou the data in question and could use more testing. If you are experiencing issues using this functionality just switch back to using usn.py without the --quick flag. I am adjusting its logic every chance I can to make it more helpful/accurate.**
 
