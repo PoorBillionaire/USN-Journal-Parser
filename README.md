@@ -111,9 +111,7 @@ timestamp,filename,fileattr,reason
 
 ####--verbose
 
-To obtail all information from a given USN record, use the --verbose / -v flag. This will return each record as a JSON object.
-
-An example of what this looks like:
+Returns all USN record properties with each entry, with the --verbose / -v flag. The result is a JSON object.
 
 ```
 dev@computer:~$python usn.py usnJRNL --verbose
