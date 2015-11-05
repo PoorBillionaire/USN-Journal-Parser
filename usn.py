@@ -70,7 +70,7 @@ def convert_dwordlong(eightbytes):
 
 
 def convert_double_dwordlong(sixteenbytes):
-    return struct.unpack_from("Q", sixteenbytes)[0]
+    return struct.unpack_from("2Q", sixteenbytes)[0]
 
 
 def find_data(usnhandle):
