@@ -184,6 +184,20 @@ In the same vain as the --filename / -f functionality, perhaps the Analyst only 
     ...
     ...
 
+Installation
+--------------
+Using setup.py:
+
+::
+    
+    python setup.py install
+    
+Using pip:
+
+::
+    
+    pip install usnparser
+
 Python Requirements
 ---------------------
 
