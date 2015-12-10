@@ -47,6 +47,7 @@ The USN Journal is a `Sparse File <https://msdn.microsoft.com/en-us/library/wind
     [ + ] Timestamp on first USN record: 2015-10-09 21:37:58.836242
 
 **--quick**
+
 **Warning: This logic does make some assumptions abou the data in question and could use more testing. If you are experiencing issues using this functionality just switch back to using usn.py without the --quick flag. I am adjusting its logic every chance I can to make it more helpful/accurate.**
 
 Speaking of the USN Journal being a Sparse File - IMO, a major pain point when parsing a USN journal is its size on disk. These files can easily scale over 20GB, comprised of a large amount of leading \x00 values. This means the script needs to 'hunt' for and find the first USN record before it can begin producing results.
@@ -133,6 +134,7 @@ Returns all USN record properties with each entry, with the --verbose / -v flag.
     }
 
 **--filename**
+
 Sometimes during a more targeted investigation, an Analyst is simply looking for additional supporting evidence to confirm what is believed or pile on to what is already known - and does not want to eyeball the entire journal for this evidence. By using the 'filename' command-line flag, an Analyst can return only USN records which contain the given string in its 'filename' attribute:
 
 ::
