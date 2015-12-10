@@ -1,3 +1,19 @@
+#!/usr/bin/python
+
+# Copyright 2015 Adam Witt
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from argparse import ArgumentParser
 import collections
 from datetime import datetime,timedelta
@@ -259,72 +275,74 @@ def daysago(n):
     return dates
 
 
+def main():
+    p = ArgumentParser()
+    p.add_argument("journal", help="Parse the specified USN journal")
+    p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
+    p.add_argument("-f", "--filename", help="Returns USN record matching a given filename")
+    p.add_argument("-i", "--info", help="Returns information about the USN Journal file itself", action="store_true")
+    p.add_argument("-l", "--last", help="Return all USN records for the last n days")
+    p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
+    p.add_argument("-v", "--verbose", help="Return all USN properties", action="store_true")
+    args = p.parse_args()
 
-p = ArgumentParser()
-p.add_argument("journal", help="Parse the specified USN journal")
-p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
-p.add_argument("-f", "--filename", help="Returns USN record matching a given filename")
-p.add_argument("-i", "--info", help="Returns information about the USN Journal file itself", action="store_true")
-p.add_argument("-l", "--last", help="Return all USN records for the last n days")
-p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
-p.add_argument("-v", "--verbose", help="Return all USN properties", action="store_true")
-args = p.parse_args()
+    if not os.path.exists(args.journal):
+        sys.exit("[ - ] File not found at the specified location")
 
-if not os.path.exists(args.journal):
-    sys.exit("[ - ] File not found at the specified location")
+    with open(args.journal, "rb") as f:
+        fsize = os.path.getsize(args.journal)
 
-with open(args.journal, "rb") as f:
-    fsize = os.path.getsize(args.journal)
+        if args.quick:
+            datapointer = find_data_quick(f, fsize)
+            f.seek(datapointer)
+        else:
+            datapointer = find_data(f)
+            f.seek(datapointer)
 
-    if args.quick:
-        datapointer = find_data_quick(f, fsize)
-        f.seek(datapointer)
-    else:
-        datapointer = find_data(f)
-        f.seek(datapointer)
-
-    if args.info:
-        recordlength, nextrecord = validate_record(f, fsize)
-        percentage = str(float(datapointer)/fsize)
-        f.seek(datapointer)
-        firstrecord = parse_usn(f, recordlength, nextrecord)
+        if args.info:
+            recordlength, nextrecord = validate_record(f, fsize)
+            percentage = str(float(datapointer)/fsize)
+            f.seek(datapointer)
+            firstrecord = parse_usn(f, recordlength, nextrecord)
         
-        print "[ + ] File size (bytes): {}".format(fsize)
-        print "[ + ] Leading null bytes consume ~{}% of the journal file".format(percentage[2:4])
-        print "[ + ] Pointer to first USN record: {}".format(datapointer)
-        print "[ + ] Timestamp on first USN record: {}".format(firstrecord["timestamp"])
+            print "[ + ] File size (bytes): {}".format(fsize)
+            print "[ + ] Leading null bytes consume ~{}% of the journal file".format(percentage[2:4])
+            print "[ + ] Pointer to first USN record: {}".format(datapointer)
+            print "[ + ] Timestamp on first USN record: {}".format(firstrecord["timestamp"])
 
-    elif args.verbose:
-        while True:
-            recordlength, nextrecord = validate_record(f, fsize)
-            usn = parse_usn(f, recordlength, nextrecord)
-            print json.dumps(usn, indent=4)
-
-    elif args.filename:
-        while True:
-            recordlength, nextrecord = validate_record(f, fsize)
-            usn = parse_usn(f, recordlength, nextrecord)
-            if args.filename.lower() in usn["filename"].lower():
+        elif args.verbose:
+            while True:
+                recordlength, nextrecord = validate_record(f, fsize)
+                usn = parse_usn(f, recordlength, nextrecord)
                 print json.dumps(usn, indent=4)
 
-    elif args.last:
-        while True:
-            dates = daysago(args.last)
-            recordlength, nextrecord = validate_record(f, fsize)
-            usn = parse_usn(f, recordlength, nextrecord)
-            if usn["timestamp"][0:10] in dates:
-                print json.dumps(usn, indent=4)
+        elif args.filename:
+            while True:
+                recordlength, nextrecord = validate_record(f, fsize)
+                usn = parse_usn(f, recordlength, nextrecord)
+                if args.filename.lower() in usn["filename"].lower():
+                    print json.dumps(usn, indent=4)
 
-    elif args.csv:
-        print "timestamp,filename,fileattr,reason"
-        while True:
-            recordlength, nextrecord = validate_record(f, fsize)
-            usn = parse_usn(f, recordlength, nextrecord)
-            print "{},{},{},{}".format(usn["timestamp"], usn["filename"], usn["fileattr"], usn["reason"])
+        elif args.last:
+            while True:
+                dates = daysago(args.last)
+                recordlength, nextrecord = validate_record(f, fsize)
+                usn = parse_usn(f, recordlength, nextrecord)
+                if usn["timestamp"][0:10] in dates:
+                    print json.dumps(usn, indent=4)
+
+        elif args.csv:
+            print "timestamp,filename,fileattr,reason"
+            while True:
+                recordlength, nextrecord = validate_record(f, fsize)
+                usn = parse_usn(f, recordlength, nextrecord)
+                print "{},{},{},{}".format(usn["timestamp"], usn["filename"], usn["fileattr"], usn["reason"])
                 
+        else:
+            while True:
+                recordlength, nextrecord = validate_record(f, fsize)
+                usn = parse_usn(f, recordlength, nextrecord )
+                print "{} | {} | {}\n".format(usn["timestamp"], usn["filename"], usn["reason"])
 
-    else:
-        while True:
-            recordlength, nextrecord = validate_record(f, fsize)
-            usn = parse_usn(f, recordlength, nextrecord )
-            print "{} | {} | {}\n".format(usn["timestamp"], usn["filename"], usn["reason"])
+if __name__ == '__main__':
+    main()
