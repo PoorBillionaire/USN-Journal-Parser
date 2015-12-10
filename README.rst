@@ -158,6 +158,7 @@ Sometimes during a more targeted investigation, an Analyst is simply looking for
     }
 
 **---last**
+
 In the same vain as the --filename / -f functionality, perhaps the Analyst only wants USN records for a certain range of dates. This is somewhat possible through usn.py - by specifying the last n number of days, the script will return only USN journal records for those days. The command below was executed on 11/3/15 and asks for records starting within the last seven days (including the current date):
 
 ::
