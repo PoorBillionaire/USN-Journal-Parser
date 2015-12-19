@@ -199,7 +199,7 @@ def validate_record(usnhandle, journalsize):
             recordlen = struct.unpack_from("I", usnhandle.read(4))[0]
             usnhandle.seek(-4, 1)
         except Exception, e:
-            if (struct.error) and (f.tell() == journalsize):
+            if (struct.error) and (usnhandle.tell() == journalsize):
                     sys.exit()
 
         if recordlen:
@@ -210,7 +210,7 @@ def validate_record(usnhandle, journalsize):
                  while not struct.unpack_from("I", usnhandle.read(4))[0]:
                     continue
              except Exception, e:
-                 if (struct.error) and (f.tell() == journalsize):
+                 if (struct.error) and (usnhandle.tell() == journalsize):
                      sys.exit()
 
         usnhandle.seek(-4, 1)
