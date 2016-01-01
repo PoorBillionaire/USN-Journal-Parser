@@ -122,7 +122,6 @@ def findNextRecord(infile, fileSize):
     # Using the recordlength, it then calculates the start of the next
     # valid USN record. This value is also returned
 
-<<<<<<< HEAD
     try:
         while True:
             recordlen = struct.unpack_from("I", infile.read(4))[0]
@@ -132,7 +131,7 @@ def findNextRecord(infile, fileSize):
     except struct.error:
             if infile.tell() >= fileSize:
                 sys.exit()
-=======
+
     while True:
         try:
             recordlen = struct.unpack_from("I", usnhandle.read(4))[0]
@@ -151,7 +150,6 @@ def findNextRecord(infile, fileSize):
              except Exception, e:
                  if (struct.error) and (usnhandle.tell() == journalsize):
                      sys.exit()
->>>>>>> a132b30d08dfd86b500f62b7e26647185b21e296
 
 
 def convertTimestamp(timestamp):
