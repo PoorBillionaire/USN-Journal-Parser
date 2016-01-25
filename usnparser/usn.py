@@ -1,18 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2015 Adam Witt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+
 
 from argparse import ArgumentParser
 import collections
@@ -21,68 +9,8 @@ import json
 import os
 import struct
 import sys
+import time
 
-
-usnReasons = collections.OrderedDict(
-              {
-               0x1 : "DATA_OVERWRITE",
-               0x2 : "DATA_EXTEND",
-               0x4 : "DATA_TRUNCATION",
-               0x10 : "NAMED_DATA_OVERWRITE",
-               0x20 : "NAMED_DATA_EXTEND",
-               0x40 : "NAMED_DATA_TRUNCATION",
-               0x100 : "FILE_CREATE",
-               0x200 : "FILE_DELETE",
-               0x400 : "EA_CHANGE",
-               0x800 : "SECURITY_CHANGE",
-               0x1000 : "RENAME_OLD_NAME",
-               0x2000 : "RENAME_NEW_NAME",
-               0x4000 : "INDEXABLE_CHANGE",
-               0x8000 : "BASIC_INFO_CHANGE",
-               0x10000 : "HARD_LINK_CHANGE",
-               0x20000 : "COMPRESSION_CHANGE",
-               0x40000 : "ENCRYPTION_CHANGE",
-               0x80000 : "OBJECT_ID_CHANGE",
-               0x100000 : "REPARSE_POINT_CHANGE",
-               0x200000 : "STREAM_CHANGE",
-               0x80000000 : "CLOSE"
-              }
-)
-
-fileAttributes = collections.OrderedDict(
-                  {
-                   0x1 : "READONLY",
-                   0x2 : "HIDDEN",
-                   0x4 : "SYSTEM",
-                   0x10 : "DIRECTORY",
-                   0x20 : "ARCHIVE",
-                   0x40 : "DEVICE",
-                   0x80 : "NORMAL",
-                   0x100 : "TEMPORARY",
-                   0x200 : "SPARSE_FILE",
-                   0x400 : "REPARSE_POINT",
-                   0x800 : "COMPRESSED",
-                   0x1000 : "OFFLINE",
-                   0x2000 : "NOT_CONTENT_INDEXED",
-                   0x4000 : "ENCRYPTED",
-                   0x8000 : "INTEGRITY_STREAM",
-                   0x10000 : "VIRTUAL",
-                   0x20000 : "NO_SCRUB_DATA"
-                  }
-)
-
-
-def convert_word(twobytes):
-    return struct.unpack_from("H", twobytes)[0]
-
-def convert_dword(fourbytes):
-    return struct.unpack_from("I", fourbytes)[0]
-
-def convert_dwordlong(eightbytes):
-    return struct.unpack_from("Q", eightbytes)[0]
-
-def convert_double_dwordlong(sixteenbytes):
-    return struct.unpack_from("2Q", sixteenbytes)[0]
 
 
 def findFirstRecord(infile):
@@ -94,8 +22,7 @@ def findFirstRecord(infile):
         data = infile.read(6553600)
         data = data.lstrip('\x00')
         if data:
-            infile.seek(infile.tell() - len(data))
-            break
+            return infile.tell() - len(data)
 
 
 def findFirstRecordQuick(infile, filesize):
@@ -115,248 +42,191 @@ def findFirstRecordQuick(infile, filesize):
             return findFirstRecord(infile)
 
 
-def findNextRecord(infile, fileSize):
-    # This function determines the recordlength of a USN record by
-    # interpreting its first four bytes. This value is returned.
-    #
-    # Using the recordlength, it then calculates the start of the next
-    # valid USN record. This value is also returned
+def findNextRecord(infile, journalSize):
+    # Often there are runs of null bytes between USN records
+    # This function reads through them and returns a pointer to
+    # the start of the next USN record
 
-    try:
-        while True:
+    while True:
+        try:
             recordlen = struct.unpack_from("I", infile.read(4))[0]
             if recordlen:
                 infile.seek(-4, 1)
                 return (infile.tell() + recordlen)
-    except struct.error:
-            if infile.tell() >= fileSize:
+        except struct.error:
+            if infile.tell() >= journalSize:
                 sys.exit()
 
-    while True:
-        try:
-            recordlen = struct.unpack_from("I", usnhandle.read(4))[0]
-            usnhandle.seek(-4, 1)
-        except Exception, e:
-            if (struct.error) and (usnhandle.tell() == journalsize):
-                    sys.exit()
-
-        if recordlen:
-            nextrecord = (usnhandle.tell() + recordlen)
-            return [recordlen, nextrecord]
-        else:
-             try:
-                 while not struct.unpack_from("I", usnhandle.read(4))[0]:
-                    continue
-             except Exception, e:
-                 if (struct.error) and (usnhandle.tell() == journalsize):
-                     sys.exit()
 
 
-def convertTimestamp(timestamp):
-    # The USN record's "timestamp" property is a Win32 FILETIME value
-    # This function returns that value in a human-readable format
-    return str(datetime(1601,1,1) + timedelta(microseconds=timestamp / 10.))
-
-
-def convertReason(reason):
-    # Returns the USN "reason" property in a human-readable format
-
-    reasons = ""
-
-    for item in usnReasons:
-        if item & reason:
-            reasons += usnReasons[item] + " "
-
-    return reasons
-
-
-def convertAttributes(fileattrs):
-    # Returns the USN 'file attributes' property in a human-readable format
-
-    attrlist = ""
-    for item in fileAttributes:
-        if fileattrs & item:
-            attrlist += fileAttributes[item] + " "
-
-    return attrlist
-
-
-def daysago(n):
-    # Return a list of dates between today and n days ago
-    
-    dates = []
-    counter = 0
-
-    while counter < int(n):
-        date = str(datetime.now() - timedelta(days=counter))
-        dates.append(date[0:10])
-        counter += 1
-    
-    return dates
-
-def prettyPrint(usn):
-    record = {
-              "recordlen" : usn.recordLength,
-              "majversion" : usn.majorVersion,
-              "minversion" : usn.minorVersion,
-              "fileref" : usn.fileReferenceNumber,
-              "parentfileref" : usn.pFileReferenceNumber,
-              "usn" : usn.usn,
-              "timestamp" : usn.timestamp,
-              "reason" : usn.reason,
-              "sourceinfo" : usn.sourceInfo,
-              "sid" : usn.securityId,
-              "fileattr" : usn.fileAttributes,
-              "filenamelen" : usn.fileNameLength,
-              "filenameoffset" : usn.fileNameOffset,
-              "filename" : usn.filename
-    }
-
-    print json.dumps(record, indent=4)
-
-class ParseUsn(object):
+class Usn(object):
     def __init__(self, infile):
-        self.recordLength(infile)
-        self.majorVersion(infile)
-        self.minorVersion(infile)
-        self.fileReferenceNumber(infile)
-        self.pFileReferenceNumber(infile)
+        self.reasons = collections.OrderedDict()
+        self.reasons[0x1] = "DATA_OVERWRITE"
+        self.reasons[0x2] = "DATA_EXTEND"
+        self.reasons[0x4] = "DATA_TRUNCATION"
+        self.reasons[0x10] = "NAMED_DATA_OVERWRITE"
+        self.reasons[0x20] = "NAMED_DATA_EXTEND"
+        self.reasons[0x40] = "NAMED_DATA_TRUNCATION"
+        self.reasons[0x100] = "FILE_CREATE"
+        self.reasons[0x200] = "FILE_DELETE"
+        self.reasons[0x400] = "EA_CHANGE"
+        self.reasons[0x800] = "SECURITY_CHANGE"
+        self.reasons[0x1000] = "RENAME_OLD_NAME"
+        self.reasons[0x2000] = "RENAME_NEW_NAME"
+        self.reasons[0x4000] = "INDEXABLE_CHANGE"
+        self.reasons[0x8000] = "BASIC_INFO_CHANGE"
+        self.reasons[0x10000] = "HARD_LINK_CHANGE"
+        self.reasons[0x20000] = "COMPRESSION_CHANGE"
+        self.reasons[0x40000] = "ENCRYPTION_CHANGE"
+        self.reasons[0x80000] = "OBJECT_ID_CHANGE"
+        self.reasons[0x100000] = "REPARSE_POINT_CHANGE"
+        self.reasons[0x200000] = "STREAM_CHANGE"
+        self.reasons[0x80000000] = "CLOSE"
+
+        self.attributes = collections.OrderedDict()
+        self.attributes[0x1] = "READONLY"
+        self.attributes[0x2] = "HIDDEN"
+        self.attributes[0x4] = "SYSTEM"
+        self.attributes[0x10] = "DIRECTORY"
+        self.attributes[0x20] = "ARCHIVE"
+        self.attributes[0x40] = "DEVICE"
+        self.attributes[0x80] = "NORMAL"
+        self.attributes[0x100] = "TEMPORARY"
+        self.attributes[0x200] = "SPARSE_FILE"
+        self.attributes[0x400] = "REPARSE_POINT"
+        self.attributes[0x800] = "COMPRESSED"
+        self.attributes[0x1000] = "OFFLINE"
+        self.attributes[0x2000] = "NOT_CONTENT_INDEXED"
+        self.attributes[0x4000] = "ENCRYPTED"
+        self.attributes[0x8000] = "INTEGRITY_STREAM"
+        self.attributes[0x10000] = "VIRTUAL"
+        self.attributes[0x20000] = "NO_SCRUB_DATA"
+
+        self.sourceInfo = collections.OrderedDict()
+        self.sourceInfo[0x1] = "DATA_MANAGEMENT"
+        self.sourceInfo[0x2] = "AUXILIARY_DATA"
+        self.sourceInfo[0x4] = "REPLICATION_MANAGEMENT"
+
         self.usn(infile)
-        self.timestamp(infile)
-        self.reason(infile)
-        self.sourceInfo(infile)
-        self.securityId(infile)
-        self.fileAttributes(infile)
-        self.fileNameLength(infile)
-        self.fileNameOffset(infile)
-        self.filename(infile)
-
-    def recordLength(self, infile):
-        self.recordLength = convert_dword(infile.read(4))
-
-    def majorVersion(self, infile):
-        self.majorVersion = convert_word(infile.read(2))
-    
-    def minorVersion(self, infile):
-        self.minorVersion = convert_word(infile.read(2))
-
-    def fileReferenceNumber(self, infile):
-        if self.majorVersion == 2:
-            self.fileReferenceNumber = convert_dwordlong(infile.read(8))
-        elif self.majorVersion == 3:
-            self.fileReferenceNumber = convert_double_dwordlong(infile.read(16))
-    
-    def pFileReferenceNumber(self, infile):
-        if self.majorVersion == 2:
-            self.pFileReferenceNumber = convert_dwordlong(infile.read(8))
-        elif self.majorVersion == 3:
-            self.pFileReferenceNumber = convert_double_dwordlong(infile.read(16))
 
     def usn(self, infile):
-        self.usn = convert_dwordlong(infile.read(8))
-    
-    def timestamp(self, infile):
-        self.timestamp = convertTimestamp(convert_dwordlong(infile.read(8)))
+        self.recordLength = struct.unpack_from("I", infile.read(4))[0]
+        self.majorVersion = struct.unpack_from("H", infile.read(2))[0]
+        self.minorVersion = struct.unpack_from("H", infile.read(2))[0]
 
-    def reason(self, infile):
-        self.reason = convertReason(convert_dword(infile.read(4)))
-    
-    def sourceInfo(self, infile):
-        self.sourceInfo = convert_dword(infile.read(4))
-    
-    def securityId(self, infile):
-        self.securityId = convert_dword(infile.read(4))
+        if self.majorVersion == 2:
+            self.referenceNumber = struct.unpack_from("Q", infile.read(8))[0]
+        elif self.majorVersion == 3:
+            self.referenceNumber = struct.unpack_from("2Q", infile.read(16))[0]
+        
+        if self.majorVersion == 2:
+            self.pReferenceNumber = struct.unpack_from("Q", infile.read(8))[0]
+        elif self.majorVersion == 3:
+            self.pReferenceNumber = struct.unpack_from("2Q", infile.read(16))[0]
 
-    def fileAttributes(self, infile):
-        self.fileAttributes = convertAttributes(convert_dword(infile.read(4)))
-
-    def fileNameLength(self, infile):
-        self.fileNameLength = convert_word(infile.read(2))
-
-    def fileNameOffset(self, infile):
-        self.fileNameOffset = convert_word(infile.read(2))
-
-    def filename(self, infile):
-        filename = struct.unpack("{}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
+        self.usn = struct.unpack_from("Q", infile.read(8))[0]
+        timestamp = struct.unpack_from("Q", infile.read(8))[0]
+        self.timestamp = self.convertTimestamp(timestamp)
+        reason = struct.unpack_from("I", infile.read(4))[0]
+        self.reason = self.convertReason(reason)
+        self.sourceInfo = struct.unpack_from("I", infile.read(4))[0]
+        self.securityId = struct.unpack_from("I", infile.read(4))[0]
+        fileAttributes = struct.unpack_from("I", infile.read(4))[0]
+        self.fileAttributes = self.convertAttributes(fileAttributes)
+        self.fileNameLength = struct.unpack_from("H", infile.read(2))[0]
+        self.fileNameOffset = struct.unpack_from("H", infile.read(2))[0]
+        filename = struct.unpack_from("{}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
         self.filename = filename.replace("\x00", "")
+
+    def prettyPrint(self):
+        record = collections.OrderedDict()
+        record["recordlen"] = self.recordLength
+        record["majversion"] = self.majorVersion
+        record["minversion"] = self.minorVersion
+        record["fileref"] = self.referenceNumber
+        record["parentfileref"] = self.pReferenceNumber
+        record["usn"] = self.usn
+        record["timestamp"] = self.timestamp
+        record["reason"] = self.reason
+        record["sourceinfo"] = self.sourceInfo
+        record["sid"] = self.securityId
+        record["fileattr"] = self.fileAttributes
+        record["filenamelen"] = self.fileNameLength
+        record["filenameoffset"] = self.fileNameOffset
+        record["filename"] = self.filename
+
+        print json.dumps(record, indent=4)
+
+    def convertTimestamp(self, timestamp):
+        # The USN record's "timestamp" property is a Win32 FILETIME value
+        # This function returns that value in a human-readable format
+        return str(datetime(1601,1,1) + timedelta(microseconds=timestamp / 10.))
+
+    def convertReason(self, reason):
+        # Returns the USN reasons attribute in a human-readable format
+
+        reasonList = ""
+
+        for i in self.reasons:
+            if i & reason:
+                reasonList += self.reasons[i] + " "
+
+        return reasonList
+
+    def convertAttributes(self, fileAttributes):
+        # Returns the USN file attributes in a human-readable format
+
+        attrlist = ""
+        for i in self.attributes:
+            if i & fileAttributes:
+                attrlist += self.attributes[i] + " "
+
+        return attrlist
 
 
 def main():
     p = ArgumentParser()
-    p.add_argument("journal", help="Parse the specified USN journal")
     p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
-    p.add_argument("-f", "--filename", help="Returns USN record matching a given filename")
-    p.add_argument("-i", "--info", help="Returns information about the USN Journal file itself", action="store_true")
-    p.add_argument("-l", "--last", help="Return all USN records for the last n days")
+    p.add_argument("-f", "--file", help="Parse the given USN journal file")
     p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
-    p.add_argument("-v", "--verbose", help="Return all USN properties", action="store_true")
+    p.add_argument("-v", "--verbose", help="Return all USN properties for each record (JSON)", action="store_true")
     args = p.parse_args()
 
-    if os.path.exists(args.journal):
-        fileSize = os.path.getsize(args.journal)
-    else:
-        sys.exit("[ - ] File not found at the specified location")
+    if args.file:
+        if os.path.exists(args.file):
+            journalSize = os.path.getsize(args.file)
+            if args.csv:
+                print "timestamp,filename,fileattr,reason"
+        else:
+            sys.exit("[ - ] File not found at the specified location")
 
-    with open(args.journal, "rb") as f:
+    with open(args.file, "rb") as f:
         if args.quick:
-            if fileSize > 1073741824:
+            if journalSize > 1073741824:
                 dataPointer = findDataQuick(f)
                 f.seek(dataPointer)
             else:
                 sys.exit("[ - ] The USN journal file must be at least 1GB in size " \
                          "to use the '--quick' functionality\n[ - ] Exitting...")
         else:
-            findFirstRecord(f)
+            dataPointer = findFirstRecord(f)
+            f.seek(dataPointer)
 
-        if args.info:
-            percentage = str(float(datapointer)/fileSize)
-            usn = ParseUsn(f)
+        while True:
+            nextRecord = findNextRecord(f, journalSize)
+            u = Usn(f)
+            f.seek(nextRecord)
+
         
-            print "[ + ] File size (bytes): {}".format(fileSize)
-            print "[ + ] Leading null bytes consume ~{}% of the journal file".format(percentage[2:4])
-            print "[ + ] Pointer to first USN record: {}".format(datapointer)
-            print "[ + ] Timestamp on first USN record: {}".format(usn.timestamp)
+            if args.verbose:
+                u.prettyPrint()
 
-        elif args.verbose:
-            while True:
-                nextrecord = findNextRecord(f, fileSize)
-                usn = ParseUsn(f)
-                prettyPrint(usn)
-                f.seek(nextrecord)
-
-        elif args.filename:
-            while True:
-                nextrecord = findNextRecord(f, fileSize)
-                usn = ParseUsn(f)
-                if args.filename.lower() in usn.filename.lower():
-                    prettyPrint(usn)
-                f.seek(nextrecord)
-
-        elif args.last:
-            while True:
-                dates = daysago(args.last)
-                nextrecord = findNextRecord(f, fileSize)
-                usn = ParseUsn(f)
-                if usn.timestamp[0:10] in dates:
-                    prettyPrint(usn)
-                f.seek(nextrecord)
-
-        elif args.csv:
-            print "timestamp,filename,fileattr,reason"
-            while True:
-                nextrecord = findNextRecord(f, fileSize)
-                usn = ParseUsn(f)
-                print "{},{},{}".format(usn.timestamp, usn.filename, usn.reason)
-                f.seek(nextrecord)
-                
-        else:
-            while True:
-                nextrecord = findNextRecord(f, fileSize)
-                usn = ParseUsn(f)
-                print "{} | {} | {}".format(usn.timestamp, usn.filename, usn.reason)
-                f.seek(nextrecord)
-
-
+            elif args.csv:
+                print "{},{},{}".format(u.timestamp, u.filename, u.reason)
+                    
+            else:
+                print "{} | {} | {} | {}".format(u.timestamp, u.filename, u.fileAttributes, u.reason)
 
 if __name__ == '__main__':
     main()
