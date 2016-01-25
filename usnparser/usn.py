@@ -204,7 +204,7 @@ def main():
     with open(args.file, "rb") as f:
         if args.quick:
             if journalSize > 1073741824:
-                dataPointer = findDataQuick(f)
+                dataPointer = findFirstRecordQuick(f, journalSize)
                 f.seek(dataPointer)
             else:
                 sys.exit("[ - ] The USN journal file must be at least 1GB in size " \
