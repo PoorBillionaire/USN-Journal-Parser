@@ -14,8 +14,8 @@ With no command-line options set, usn.py will produce USN journal records in the
 
 ::
 
-    dev@computer:$ python usn.py usnJRNL
-    2015-10-09 21:44:39.003402 | msctfui.dll | FILE_CREATE
+    dev@computer:$ python usn.py -f usnjournal
+    2016-01-26 18:56:20.046268 | test.vbs | ARCHIVE  | DATA_OVERWRITE DATA_EXTEND 
 
 Command-Line Options
 -----------------------
@@ -41,7 +41,7 @@ Using an interpreted language such as Perl or Python to do this initial hunting 
 
 ::
 
-    dev@computer$ python usn.py usnJRNL --quick
+    dev@computer$ python usn.py -f usnjournal --quick
     [ - ] This USN journal is not large enough for the --quick functionality
     [ - ] Exitting...
 
@@ -49,7 +49,7 @@ Below is an example of the time it takes to find valid data in a large USN journ
 
 ::
 
-    PS Dev:\Desktop> Measure-Command {C:\Python27\python.exe usn.py usnJRNL}
+    PS Dev:\Desktop> Measure-Command {C:\Python27\python.exe usn.py -f usnjournal}
     Hours             : 0
     Minutes           : 6
     Seconds           : 3
@@ -65,7 +65,7 @@ Now the same USN journal file, but with the --quick flag invoked. The time it ta
 
 ::
 
-    PS Dev:\Desktop> Measure-Command {C:\Python27\python.exe usn.py usnJRNL --quick}
+    PS Dev:\Desktop> Measure-Command {C:\Python27\python.exe usn.py -f usnjournal --quick}
     Hours             : 0
     Minutes           : 0
     Seconds           : 2
@@ -79,7 +79,7 @@ Now the same USN journal file, but with the --quick flag invoked. The time it ta
 
 **--csv**
 
-Using the CSV flag will, as expected, provide results in CSV format. For now, using the --csv / -c option will provide:
+Using the CSV flag will, as expected, provide results in CSV format. Using the --csv / -c option provides the same USN fields as default output:
 
 * Timestamp
 * Filename
@@ -90,7 +90,7 @@ At this point the --csv flag cannot be combined with any other flag other than -
 
 ::
 
-    dev@computer:~$python usn.py usnJRNL --csv
+    dev@computer:~$python usn.py -f usnjournal --csv
     timestamp,filename,fileattr,reason
     2015-10-09 21:37:58.836242,A75BFDE52F3DD8E6.dat,ARCHIVE NOT_CONTENT_INDEXED,DATA_EXTEND FILE_CREATE
 
@@ -100,7 +100,7 @@ Returns all USN record properties with each entry, with the --verbose / -v flag.
 
 ::
 
-    dev@computer:~$python usn.py usnJRNL --verbose
+    dev@computer:~$python usn.py -f usnjournal --verbose
     {
         "recordlen": 88, 
         "majversion": 2, 
@@ -120,11 +120,11 @@ Returns all USN record properties with each entry, with the --verbose / -v flag.
 
 **--grep / -g**
 
-Sometimes during a more targeted investigation, an Analyst is simply looking for additional supporting evidence to confirm what is believed or pile on to what is already known - and does not want to eyeball the entire journal for this evidence. By using the 'filename' command-line flag, an Analyst can return only USN records which contain the given string in its 'filename' attribute:
+Sometimes during a more targeted investigation, an Analyst is simply looking for additional supporting evidence to confirm what is believed or pile on to what is already known - and does not want to eyeball the entire journal for this evidence. By using the '--grep / -g' command-line flag, an Analyst can return only USN records which match a given 'filename' attribute:
 
 ::
 
-    dev@computer:~$ python usn.py usnJRNL --filename jernuhl
+    dev@computer:~$ python usn.py -f usnjournal --grep jernuhl.txt
     {
         "recordlen": 88, 
         "majversion": 2, 
