@@ -22,29 +22,14 @@ Command-Line Options
 
 ::
 
-    positional arguments:
-      journal               Parse the specified USN journal
     optional arguments:
       -h, --help            show this help message and exit
       -c, --csv             Return USN records in comma-separated format
-      -f FILENAME, --filename FILENAME
-                            Returns USN record matching a given filename
-      -i, --info            Returns information about the USN Journal file itself
-      -l LAST, --last LAST  Return all USN records for the last n days
+      -f FILE, --file FILE  Parse the given USN journal file
+      -g GREP, --grep GREP  'grep' for a specific file name in a USN record, and
+                            only provide records which match
       -q, --quick           Parse a large journal file quickly
-      -v, --verbose         Return all USN properties
-
-**--info**
-
-The USN Journal is a `Sparse File <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365564(v=vs.85).aspx>`_. A large-ish USN change journal can contain gigabytes and gigabytes of leading NULL bytes. Sometimes a large journal file doesn't even contain that many USN records. Using the --info / -i switch prints high-level information about the USN journal itself.
-
-::
-
-    dev@computer:~$python usn.py usnJRNL --info
-    [ + ] File size (bytes): 57118079632
-    [ + ] Leading null bytes consume ~99% of the journal file
-    [ + ] Pointer to first USN record: 57082904576
-    [ + ] Timestamp on first USN record: 2015-10-09 21:37:58.836242
+      -v, --verbose         Return all USN properties for each record (JSON)
 
 **--quick**
 
@@ -133,7 +118,7 @@ Returns all USN record properties with each entry, with the --verbose / -v flag.
         "filename": "wmiutils.dll"
     }
 
-**--filename**
+**--grep / -g**
 
 Sometimes during a more targeted investigation, an Analyst is simply looking for additional supporting evidence to confirm what is believed or pile on to what is already known - and does not want to eyeball the entire journal for this evidence. By using the 'filename' command-line flag, an Analyst can return only USN records which contain the given string in its 'filename' attribute:
 
@@ -156,33 +141,6 @@ Sometimes during a more targeted investigation, an Analyst is simply looking for
         "filenameoffset": 60, 
         "filename": "jernuhl.txt"
     }
-
-**---last**
-
-In the same vain as the --filename / -f functionality, perhaps the Analyst only wants USN records for a certain range of dates. This is somewhat possible through usn.py - by specifying the last n number of days, the script will return only USN journal records for those days. The command below was executed on 11/3/15 and asks for records starting within the last seven days (including the current date):
-
-::
-
-    dev@computer:~$ python usn.py usnJRNL --last 7
-    {
-        "recordlen": 136, 
-        "majversion": 2, 
-        "minversion": 0, 
-        "fileref": 844424930247194, 
-        "pfilerefef": 281474976710685, 
-        "usn": 452708840, 
-        "timestamp": "2015-10-28 00:46:51.412002", 
-        "reason": "CLOSE FILE_DELETE", 
-        "sourceinfo": 0, 
-        "sid": 0, 
-        "fileattr": "ARCHIVE", 
-        "filenamelen": 72, 
-        "filenameoffset": 60, 
-        "filename": "$TxfLogContainer00000000000000000003"
-    }
-    ...
-    ...
-    ...
 
 Installation
 --------------
@@ -208,8 +166,3 @@ Python Requirements
 * os
 * struct
 * sys
-
-To-Do
---------
-
-* Enable --csv / -c to work with all other flags, not just with --quick / -q
