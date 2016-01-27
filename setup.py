@@ -9,7 +9,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='usnparser',
-    version='1.0.7',
+    version='2.0.0',
     description='A Python script to parse the NTFS USN journal',
     long_description=long_description,
     url='https://github.com/PoorBillionaire/USN-Journal-Parser',
@@ -24,7 +24,6 @@ setup(
         'Programming Language :: Python :: 2.7'
     ],
 
-    keywords='DFIR USN Forensics Incident Response Microsoft Windows',
     packages=find_packages(),
     scripts=['usnparser/usn.py'],
 )
