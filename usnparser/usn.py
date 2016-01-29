@@ -151,7 +151,7 @@ class Usn(object):
         self.fileAttributes = self.convertAttributes(fileAttributes)
         self.fileNameLength = struct.unpack_from("H", infile.read(2))[0]
         self.fileNameOffset = struct.unpack_from("H", infile.read(2))[0]
-        filename = struct.unpack_from("{}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
+        filename = struct.unpack("{}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
         self.filename = filename.replace("\x00", "")
 
     def prettyPrint(self):
