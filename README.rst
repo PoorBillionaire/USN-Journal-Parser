@@ -1,12 +1,12 @@
 USN-Journal-Parser
 ====================
-Python script to parse the NTFS USN Journal
+Python script to parse the NTFS USN Change Journal
 
 Description
 -------------
-The NTFS USN journal is a volume-specific file which essentially logs changes to files and file metadata. As such, it can be a treasure trove of information during DFIR investigations. The change journal is located at $Extend\$UsnJrnl:$J and can be easily extracted using Encase or FTK.
+The NTFS USN Change journal is a volume-specific file which logs changes to files and file metadata. As such, it can be a treasure trove of information during an investigation. The change journal is located at $Extend\\$UsnJrnl:$J.
 
-usn.py is a script written in Python which parses the journal - and has what I consider to be a couple of unique features.
+usn.py is a script written in Python which parses the journal's contents - and has what I consider to be a couple of unique features.
 
 Default Output
 ----------------
@@ -33,11 +33,11 @@ Command-Line Options
 
 **--quick**
 
-**Warning: This logic does make some assumptions abou the data in question and could use more testing. If you are experiencing issues using this functionality just switch back to using usn.py without the --quick flag. I am adjusting its logic every chance I can to make it more helpful/accurate.**
+**Warning: This logic does make (very good) assumptions about the data in question. On the off chance you are experience issues using this functionality just switch back to using usn.py without the --quick flag. Personally, I have never had issues with it.**
 
-Speaking of the USN Journal being a Sparse File - IMO, a major pain point when parsing a USN journal is its size on disk. These files can easily scale over 20GB, comprised of a large amount of leading \x00 values. This means the script needs to 'hunt' for and find the first USN record before it can begin producing results.
+The USN Journal is a Sparse File - A major pain point when parsing a USN journal is its size after being extracted to disk. Sparse Files of this nature can easily scale to be dozens of gigabytes in size, comprised of a large swaths of null values. As such, this script needs to 'hunt' for and find the first valid USN record before it can begin producing results.
 
-Using an interpreted language such as Perl or Python to do this initial hunting can be extremely time consuming if an Analyst is working with a larger journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly: by jumping ahead a gigabyte at a time looking for data. Jumping ahead one gigabyte at a time requires the journal in question to be at least one gigabyte in size. If it isn't, the script will simply produce an error and exit:
+Using an interpreted language such as Perl or Python to do this initial hunting can be extremely time consuming if an Analyst is working with a large journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly: by jumping ahead a gigabyte at a time looking for data. Jumping ahead one gigabyte at a time requires the journal in question to be at least one gigabyte in size. If it isn't, the script will simply produce an error and exit:
 
 ::
 
@@ -96,51 +96,41 @@ At this point the --csv flag cannot be combined with any other flag other than -
 
 **--verbose**
 
-Returns all USN record properties with each entry, with the --verbose / -v flag. The result is a JSON object.
+Return all USN record properties for each entry, with the --verbose / -v flag. The results are JSON-formatted.
 
 ::
 
     dev@computer:~$python usn.py -f usnjournal --verbose
     {
-        "recordlen": 88, 
+        "recordlen": 96, 
         "majversion": 2, 
         "minversion": 0, 
-        "fileref": 281474976767661, 
-        "pfilerefef": 844424930233360, 
-        "usn": 419506120, 
-        "timestamp": "2015-10-09 21:38:52.160484", 
-        "reason": "CLOSE FILE_DELETE", 
+        "mftSequenceNumber": 1, 
+        "mftEntryNumber": 95075, 
+        "parentMftSequenceNumber": 1, 
+        "parentMftEntryNumber": 2221, 
+        "usn": 432, 
+        "timestamp": "2016-02-22 02:59:26.374840", 
+        "reason": "FILE_DELETE CLOSE ", 
         "sourceinfo": 0, 
         "sid": 0, 
-        "fileattr": "ARCHIVE", 
-        "filenamelen": 24, 
+        "fileattr": "ARCHIVE ", 
+        "filenamelen": 34, 
         "filenameoffset": 60, 
-        "filename": "wmiutils.dll"
+        "filename": "WindowsUpdate.log"
     }
 
 **--grep / -g**
 
-Sometimes during a more targeted investigation, an Analyst is simply looking for additional supporting evidence to confirm what is believed or pile on to what is already known - and does not want to eyeball the entire journal for this evidence. By using the '--grep / -g' command-line flag, an Analyst can return only USN records which match a given 'filename' attribute:
+Sometimes during a more targeted search, an Analyst is simply looking for additional supporting evidence to confirm what is believed or pile on to what is already known - and does not want to eyeball the entire journal for this evidence. By using the '--grep / -g' command-line flag, an Analyst can return only USN records which match a given 'filename' attribute:
 
 ::
 
-    dev@computer:~$ python usn.py -f usnjournal --grep jernuhl.txt
-    {
-        "recordlen": 88, 
-        "majversion": 2, 
-        "minversion": 0, 
-        "fileref": 5910974510924810, 
-        "pfilerefef": 1688849860348307, 
-        "usn": 461014088, 
-        "timestamp": "2015-10-28 01:59:56.233596", 
-        "reason": "FILE_CREATE", 
-        "sourceinfo": 0, 
-        "sid": 0, 
-        "fileattr": "ARCHIVE", 
-        "filenamelen": 22, 
-        "filenameoffset": 60, 
-        "filename": "jernuhl.txt"
-    }
+    dev@computer:~$ python usn.py -f usnjournal --grep test.txt
+
+    2016-04-11 00:26:09.324654 | test.txt | ARCHIVE  | FILE_CREATE 
+    2016-04-11 00:26:09.324654 | test.txt | ARCHIVE  | FILE_CREATE CLOSE 
+    2016-04-11 00:26:09.324654 | test.txt | ARCHIVE  | FILE_DELETE CLOSE 
 
 Installation
 --------------
@@ -155,14 +145,3 @@ Using pip:
 ::
     
     pip install usnparser
-
-Python Requirements
----------------------
-
-* argparse
-* collections
-* datetime
-* json
-* os
-* struct
-* sys
