@@ -131,13 +131,13 @@ class Usn(object):
         self.minorVersion = struct.unpack_from("H", infile.read(2))[0]
 
         if self.majorVersion == 2:
-            self.referenceNumber = struct.unpack_from("Q", infile.read(8))[0]
+            self.mftEntryNumber = self.convertFileReference(infile.read(6))
+            self.mftSeqNumber = struct.unpack_from("H", infile.read(2))[0]
+            self.parentMftEntryNumber = self.convertFileReference(infile.read(6))
+            self.parentMftSeqNumber = struct.unpack_from("H", infile.read(2))[0]
+        
         elif self.majorVersion == 3:
             self.referenceNumber = struct.unpack_from("2Q", infile.read(16))[0]
-        
-        if self.majorVersion == 2:
-            self.pReferenceNumber = struct.unpack_from("Q", infile.read(8))[0]
-        elif self.majorVersion == 3:
             self.pReferenceNumber = struct.unpack_from("2Q", infile.read(16))[0]
 
         self.usn = struct.unpack_from("Q", infile.read(8))[0]
@@ -154,13 +154,24 @@ class Usn(object):
         filename = struct.unpack("{}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
         self.filename = filename.replace("\x00", "")
 
+    def convertFileReference(self, buf):
+        byteArray = map(lambda x: '%02x' % ord(x), buf)
+            
+        byteString = ""
+        for i in byteArray[::-1]:
+            byteString += i
+        
+        return int(byteString, 16)
+
     def prettyPrint(self):
         record = collections.OrderedDict()
         record["recordlen"] = self.recordLength
         record["majversion"] = self.majorVersion
         record["minversion"] = self.minorVersion
-        record["fileref"] = self.referenceNumber
-        record["parentfileref"] = self.pReferenceNumber
+        record["mftSequenceNumber"] = self.mftSeqNumber
+        record["mftEntryNumber"] = self.mftEntryNumber
+        record["parentMftSequenceNumber"] = self.parentMftSeqNumber
+        record["parentMftEntryNumber"] = self.parentMftEntryNumber
         record["usn"] = self.usn
         record["timestamp"] = self.timestamp
         record["reason"] = self.reason
