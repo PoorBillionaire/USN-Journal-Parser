@@ -124,8 +124,9 @@ class Usn(object):
             self.pReferenceNumber = struct.unpack_from("<2Q", infile.read(16))[0]
 
         self.usn = struct.unpack_from("<Q", infile.read(8))[0]
-        timestamp = struct.unpack_from("<Q", infile.read(8))[0]
-        self.timestamp = self.convertTimestamp(timestamp)
+        self.filetime = struct.unpack_from("<Q", infile.read(8))[0]
+        self.humanTimestamp = self.filetimeToHumanReadable(self.filetime)
+        self.epochTimestamp = self.filetimeToEpoch(self.filetime)
         reason = struct.unpack_from("<I", infile.read(4))[0]
         self.reason = self.convertAttributes(self.reasons, reason)
         self.sourceInfo = struct.unpack_from("<I", infile.read(4))[0]
@@ -134,7 +135,7 @@ class Usn(object):
         self.fileAttributes = self.convertAttributes(self.attributes, fileAttributes)
         self.fileNameLength = struct.unpack_from("<H", infile.read(2))[0]
         self.fileNameOffset = struct.unpack_from("<H", infile.read(2))[0]
-        filename = struct.unpack("{}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
+        filename = struct.unpack("{0}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
         self.filename = filename.replace(b"\x00", b"").decode('ascii')
 
 
@@ -148,7 +149,7 @@ class Usn(object):
         record["parentMftSequenceNumber"] = self.parentMftSeqNumber
         record["parentMftEntryNumber"] = self.parentMftEntryNumber
         record["usn"] = self.usn
-        record["timestamp"] = self.timestamp
+        record["timestamp"] = self.humanTimestamp
         record["reason"] = self.reason
         record["sourceinfo"] = self.sourceInfo
         record["sid"] = self.securityId
@@ -159,10 +160,14 @@ class Usn(object):
 
         print(json.dumps(record, indent=4))
 
-    def convertTimestamp(self, timestamp):
+    def filetimeToHumanReadable(self, filetime):
         # The USN record's "timestamp" property is a Win32 FILETIME value
         # This function returns that value in a human-readable format
-        return str(datetime(1601,1,1) + timedelta(microseconds=timestamp / 10.))
+        return str(datetime(1601,1,1) + timedelta(microseconds=filetime / 10.))
+
+    def filetimeToEpoch(sefl, filetime):
+        return int(filetime / 10000000 - 11644473600)
+
 
     def convertAttributes(self, attributeType, data):
         # Returns the USN reasons attribute in a human-readable format
@@ -184,8 +189,11 @@ class Usn(object):
 
 def main():
     p = ArgumentParser()
+    p.add_argument("-b", "--body", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-f", "--file", help="Parse the given USN journal file")
+    p.add_argument("-s", "--system", help="System name (use with -t)")
+    p.add_argument("-t", "--tln", help="TLN output (use with -s)", action="store_true")
     p.add_argument("-v", "--verbose", help="Return all USN properties for each record (JSON)", action="store_true")
     args = p.parse_args()
 
@@ -196,6 +204,9 @@ def main():
 
         if args.csv:
             print("timestamp,filename,fileattr,reason")
+        if args.tln:
+            if not args.system:
+                systemname = ""
 
         while True:
             nextRecord = findNextRecord(f, journalSize)
@@ -205,11 +216,17 @@ def main():
             if args.verbose:
                 u.prettyPrint()
 
+            elif args.body:
+                print("0|{0}|{1}-{2}|0|0|0|0|{3}|{3}|{3}|{3}".format(u.filename, u.mftEntryNumber, u.mftSeqNumber, u.epochTimestamp))
+
+            elif args.tln:
+                print("{0}|USN|{1}||{2}:{3}".format(u.epochTimestamp, systemname, u.filename, u.reason))
+
             elif args.csv:
-                print("{},{},{},{}".format(u.timestamp, u.filename, u.fileAttributes, u.reason))
+                print("{0},{1},{2},{3}".format(u.humanTimestamp, u.filename, u.fileAttributes, u.reason))
                     
             else:
-                print("{} | {} | {} | {}".format(u.timestamp, u.filename, u.fileAttributes, u.reason))
+                print("{0} | {1} | {2} | {3}".format(u.humanTimestamp, u.filename, u.fileAttributes, u.reason))
 
 if __name__ == '__main__':
     main()
