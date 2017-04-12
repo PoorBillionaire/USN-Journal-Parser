@@ -1,54 +1,52 @@
 #!/usr/bin/python
 
 
-#Copyright 2015 Adam Witt
+# Copyright 2015 Adam Witt
 #
-#Licensed under the Apache License, Version 2.0 (the "License");
-#you may not use this file except in compliance with the License.
-#You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-#Unless required by applicable law or agreed to in writing, software
-#distributed under the License is distributed on an "AS IS" BASIS,
-#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#See the License for the specific language governing permissions and
-#limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 # Contact: <accidentalassist@gmail.com>
 
-from argparse import ArgumentParser
-import collections
-from datetime import datetime,timedelta
-import json
-import os
-import struct
-import sys
-import time
+from __future__ import print_function
 
+import os
+import sys
+import json
+import time
+import struct
+import collections
+from argparse import ArgumentParser
+from datetime import datetime,timedelta
 
 
 def findFirstRecord(infile):
     # Returns a pointer to the first USN record found
     # Modified version of Dave Lassalle's "parseusn.py"
     # https://github.com/sans-dfir/sift-files/blob/master/scripts/parseusn.py
-
     while True:
-        data = infile.read(6553600)
-        data = data.lstrip('\x00')
+        data = infile.read(65536).lstrip(b"\x00")
         if data:
             return infile.tell() - len(data)
 
-
 def findFirstRecordQuick(infile, filesize):
-    # Same as findData(), but initially reads larger swaths of leading
+    # Same as findFirstRecord(), but initially seeks through larger swaths of
     # NULL bytes to speed the time it takes to parse a larger journal file
 
     while True:
         if infile.tell() + 1073741824 < filesize:
             infile.seek(1073741824, 1)
             data = infile.read(6553600)
-            data = data.lstrip("\x00")
+            data = data.lstrip(b"\x00")
 
             if data:
                 infile.seek((-1073741824 + 6553600), 1)
@@ -56,22 +54,22 @@ def findFirstRecordQuick(infile, filesize):
         else:
             return findFirstRecord(infile)
 
-
 def findNextRecord(infile, journalSize):
-    # Often there are runs of null bytes between USN records
-    # This function reads through them and returns a pointer to
-    # the start of the next USN record
+    # There are runs of null bytes between USN records. I'm guessing
+    # this is done to ensure that journal records are cluster-aligned
+    # on disk.
+    # This function reads through these null bytes, returning an offset
+    # to the first byte of the the next USN record.
 
     while True:
         try:
-            recordlen = struct.unpack_from("I", infile.read(4))[0]
+            recordlen = struct.unpack_from("<I", infile.read(4))[0]
             if recordlen:
                 infile.seek(-4, 1)
                 return (infile.tell() + recordlen)
         except struct.error:
             if infile.tell() >= journalSize:
                 sys.exit()
-
 
 
 class Usn(object):
@@ -126,42 +124,35 @@ class Usn(object):
         self.usn(infile)
 
     def usn(self, infile):
-        self.recordLength = struct.unpack_from("I", infile.read(4))[0]
-        self.majorVersion = struct.unpack_from("H", infile.read(2))[0]
-        self.minorVersion = struct.unpack_from("H", infile.read(2))[0]
+        self.recordLength = struct.unpack_from("<I", infile.read(4))[0]
+        self.majorVersion = struct.unpack_from("<H", infile.read(2))[0]
+        self.minorVersion = struct.unpack_from("<H", infile.read(2))[0]
 
         if self.majorVersion == 2:
             self.mftEntryNumber = self.convertFileReference(infile.read(6))
-            self.mftSeqNumber = struct.unpack_from("H", infile.read(2))[0]
+            self.mftSeqNumber = struct.unpack_from("<H", infile.read(2))[0]
             self.parentMftEntryNumber = self.convertFileReference(infile.read(6))
-            self.parentMftSeqNumber = struct.unpack_from("H", infile.read(2))[0]
-        
+            self.parentMftSeqNumber = struct.unpack_from("<H", infile.read(2))[0]
+
         elif self.majorVersion == 3:
-            self.referenceNumber = struct.unpack_from("2Q", infile.read(16))[0]
-            self.pReferenceNumber = struct.unpack_from("2Q", infile.read(16))[0]
+            self.referenceNumber = struct.unpack_from("<2Q", infile.read(16))[0]
+            self.pReferenceNumber = struct.unpack_from("<2Q", infile.read(16))[0]
 
-        self.usn = struct.unpack_from("Q", infile.read(8))[0]
-        timestamp = struct.unpack_from("Q", infile.read(8))[0]
-        self.timestamp = self.convertTimestamp(timestamp)
-        reason = struct.unpack_from("I", infile.read(4))[0]
-        self.reason = self.convertReason(reason)
-        self.sourceInfo = struct.unpack_from("I", infile.read(4))[0]
-        self.securityId = struct.unpack_from("I", infile.read(4))[0]
-        fileAttributes = struct.unpack_from("I", infile.read(4))[0]
-        self.fileAttributes = self.convertAttributes(fileAttributes)
-        self.fileNameLength = struct.unpack_from("H", infile.read(2))[0]
-        self.fileNameOffset = struct.unpack_from("H", infile.read(2))[0]
-        filename = struct.unpack("{}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
-        self.filename = filename.replace("\x00", "")
+        self.usn = struct.unpack_from("<Q", infile.read(8))[0]
+        self.filetime = struct.unpack_from("<Q", infile.read(8))[0]
+        self.humanTimestamp = self.filetimeToHumanReadable(self.filetime)
+        self.epochTimestamp = self.filetimeToEpoch(self.filetime)
+        reason = struct.unpack_from("<I", infile.read(4))[0]
+        self.reason = self.convertAttributes(self.reasons, reason)
+        self.sourceInfo = struct.unpack_from("<I", infile.read(4))[0]
+        self.securityId = struct.unpack_from("<I", infile.read(4))[0]
+        fileAttributes = struct.unpack_from("<I", infile.read(4))[0]
+        self.fileAttributes = self.convertAttributes(self.attributes, fileAttributes)
+        self.fileNameLength = struct.unpack_from("<H", infile.read(2))[0]
+        self.fileNameOffset = struct.unpack_from("<H", infile.read(2))[0]
+        filename = struct.unpack("{0}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
+        self.filename = filename.replace(b"\x00", b"").decode('ascii')
 
-    def convertFileReference(self, buf):
-        byteArray = map(lambda x: '%02x' % ord(x), buf)
-            
-        byteString = ""
-        for i in byteArray[::-1]:
-            byteString += i
-        
-        return int(byteString, 16)
 
     def prettyPrint(self):
         record = collections.OrderedDict()
@@ -173,7 +164,7 @@ class Usn(object):
         record["parentMftSequenceNumber"] = self.parentMftSeqNumber
         record["parentMftEntryNumber"] = self.parentMftEntryNumber
         record["usn"] = self.usn
-        record["timestamp"] = self.timestamp
+        record["timestamp"] = self.humanTimestamp
         record["reason"] = self.reason
         record["sourceinfo"] = self.sourceInfo
         record["sid"] = self.securityId
@@ -182,53 +173,51 @@ class Usn(object):
         record["filenameoffset"] = self.fileNameOffset
         record["filename"] = self.filename
 
-        print json.dumps(record, indent=4)
+        print(json.dumps(record, indent=4))
 
-    def convertTimestamp(self, timestamp):
+    def filetimeToHumanReadable(self, filetime):
         # The USN record's "timestamp" property is a Win32 FILETIME value
         # This function returns that value in a human-readable format
-        return str(datetime(1601,1,1) + timedelta(microseconds=timestamp / 10.))
+        return str(datetime(1601,1,1) + timedelta(microseconds=filetime / 10.))
 
-    def convertReason(self, reason):
+    def filetimeToEpoch(sefl, filetime):
+        return int(filetime / 10000000 - 11644473600)
+
+
+    def convertAttributes(self, attributeType, data):
         # Returns the USN reasons attribute in a human-readable format
+        attributeList = []
 
-        reasonList = ""
+        for i in attributeType:
+            if i & data:
+                attributeList.append(attributeType[i])
+        return " ".join(attributeList)
 
-        for i in self.reasons:
-            if i & reason:
-                reasonList += self.reasons[i] + " "
+    def convertFileReference(self, buf):
+        b = bytearray(buf)
+        byteString = ""
 
-        return reasonList
-
-    def convertAttributes(self, fileAttributes):
-        # Returns the USN file attributes in a human-readable format
-
-        attrlist = ""
-        for i in self.attributes:
-            if i & fileAttributes:
-                attrlist += self.attributes[i] + " "
-
-        return attrlist
+        for i in b[::-1]:
+            byteString += format(i, 'x')
+        return int(byteString, 16)
 
 
 def main():
     p = ArgumentParser()
+    p.add_argument("-b", "--body", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-f", "--file", help="Parse the given USN journal file")
-    p.add_argument("-g", "--grep", help="'grep' for a specific file name in a USN record, and only provide records which match")
     p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
+    p.add_argument("-s", "--system", help="System name (use with -t)")
+    p.add_argument("-t", "--tln", help="TLN output (use with -s)", action="store_true")
     p.add_argument("-v", "--verbose", help="Return all USN properties for each record (JSON)", action="store_true")
     args = p.parse_args()
 
-    if args.file:
-        if os.path.exists(args.file):
-            journalSize = os.path.getsize(args.file)
-            if args.csv:
-                print "timestamp,filename,fileattr,reason"
-        else:
-            sys.exit("[ - ] File not found at the specified location")
-
     with open(args.file, "rb") as f:
+        journalSize = os.path.getsize(args.file)
+        dataPointer = findFirstRecord(f)
+        f.seek(dataPointer)
+
         if args.quick:
             if journalSize > 1073741824:
                 dataPointer = findFirstRecordQuick(f, journalSize)
@@ -236,9 +225,13 @@ def main():
             else:
                 sys.exit("[ - ] The USN journal file must be at least 1GB in size " \
                          "to use the '--quick' functionality\n[ - ] Exitting...")
-        else:
-            dataPointer = findFirstRecord(f)
-            f.seek(dataPointer)
+        
+        elif args.csv:
+            print("timestamp,filename,fileattr,reason")
+            
+        elif args.tln:
+            if not args.system:
+                systemname = ""
 
         while True:
             nextRecord = findNextRecord(f, journalSize)
@@ -248,17 +241,17 @@ def main():
             if args.verbose:
                 u.prettyPrint()
 
-            elif args.csv:
-                print "{},{},{},{}".format(u.timestamp, u.filename, u.fileAttributes, u.reason)
+            elif args.body:
+                print("0|{0}|{1}-{2}|0|0|0|0|{3}|{3}|{3}|{3}".format(u.filename, u.mftEntryNumber, u.mftSeqNumber, u.epochTimestamp))
 
-            elif args.grep:
-                if args.grep.lower() == u.filename.lower():
-                    print "{} | {} | {} | {}".format(u.timestamp, u.filename, u.fileAttributes,u.reason)
+            elif args.tln:
+                print("{0}|USN|{1}||{2}:{3}".format(u.epochTimestamp, systemname, u.filename, u.reason))
+
+            elif args.csv:
+                print("{0},{1},{2},{3}".format(u.humanTimestamp, u.filename, u.fileAttributes, u.reason))
                     
             else:
-                print "{} | {} | {} | {}".format(u.timestamp, u.filename, u.fileAttributes, u.reason)
+                print("{0} | {1} | {2} | {3}".format(u.humanTimestamp, u.filename, u.fileAttributes, u.reason))
 
 if __name__ == '__main__':
     main()
-
-
