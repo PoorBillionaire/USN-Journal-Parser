@@ -4,9 +4,9 @@ Python script to parse the NTFS USN Change Journal
 
 Description
 -------------
-The NTFS USN Change journal is a volume-specific file which logs changes to files and file metadata. As such, it can be a treasure trove of information during an investigation. The change journal is located at $Extend\\$UsnJrnl:$J.
+The NTFS USN Change journal is a volume-specific file which logs metadata changes to files. It is a treasure trove of information during a forensic investigation. The change journal is located at $Extend\\$UsnJrnl:$J.
 
-usn.py is a script written in Python which parses the journal's contents - and has what I consider to be a couple of unique features.
+usn.py is a script written in Python which parses the journal's contents, and features a myriad of output formats.
 
 Default Output
 ----------------
@@ -24,20 +24,22 @@ Command-Line Options
 
     optional arguments:
       -h, --help            show this help message and exit
+      -b, --body            Return USN records in comma-separated format
       -c, --csv             Return USN records in comma-separated format
       -f FILE, --file FILE  Parse the given USN journal file
-      -g GREP, --grep GREP  'grep' for a specific file name in a USN record, and
-                            only provide records which match
       -q, --quick           Parse a large journal file quickly
+      -s SYSTEM, --system SYSTEM
+                        System name (use with -t)
+      -t, --tln             TLN output (use with -s)
       -v, --verbose         Return all USN properties for each record (JSON)
 
 **--quick**
 
 **Warning: This logic does make (very good) assumptions about the data in question. On the off chance you are experience issues using this functionality just switch back to using usn.py without the --quick flag. Personally, I have never had issues with it.**
 
-The USN Journal is a Sparse File - A major pain point when parsing a USN journal is its size after being extracted to disk. Sparse Files of this nature can easily scale to be dozens of gigabytes in size, comprised of a large swaths of null values. As such, this script needs to 'hunt' for and find the first valid USN record before it can begin producing results.
+The USN Journal is a Sparse File. Depending on how the file was extracted, it may be bloated with gigabytes of NULL bytes. As such, a parser needs to read through these NULL bytes to find the first valid USN record before it can begin producing results.
 
-Using an interpreted language such as Perl or Python to do this initial hunting can be extremely time consuming if an Analyst is working with a large journal file. Applying the --quick / -q flag enables the script to perform this search much more quickly: by jumping ahead a gigabyte at a time looking for data. Jumping ahead one gigabyte at a time requires the journal in question to be at least one gigabyte in size. If it isn't, the script will simply produce an error and exit:
+Leveraging an interpreted language such as Perl or Python can be a time consuming process if the journal file is large. Using this script, apply the --quick / -q flag to perform this search more quickly: by jumping ahead a gigabyte at a time seeking for valid USN data. Obviously, seeking ahead one gigabyte at a time requires the journal in question to be at least one gigabyte in size. If it isn't, the script will simply produce an error and exit:
 
 ::
 
@@ -45,7 +47,7 @@ Using an interpreted language such as Perl or Python to do this initial hunting 
     [ - ] This USN journal is not large enough for the --quick functionality
     [ - ] Exitting...
 
-Below is an example of the time it takes to find valid data in a large USN journal - 39GB in size. This example is not using the --quick functionality and takes over six minutes to even begin parsing data:
+Below is an example of the time it takes to find valid data in a large USN journal - 39GB in size, containing mostly NULL bytes. This example is not using the --quick functionality and takes over six minutes to begin producing results:
 
 ::
 
@@ -86,7 +88,7 @@ Using the CSV flag will, as expected, provide results in CSV format. Using the -
 * File attributes
 * Reason
 
-At this point the --csv flag cannot be combined with any other flag other than --quick. That should change soon, as I want --csv capability for any data returned. An example of what this looks like is below:
+An example of what this looks like is below:
 
 ::
 
@@ -96,7 +98,7 @@ At this point the --csv flag cannot be combined with any other flag other than -
 
 **--verbose**
 
-Return all USN record properties for each entry, with the --verbose / -v flag. The results are JSON-formatted.
+Return all USN record members for each record with the --verbose / -v flag. The results are JSON-formatted.
 
 ::
 
@@ -122,7 +124,6 @@ Return all USN record properties for each entry, with the --verbose / -v flag. T
 
 **--grep / -g**
 
-Sometimes during a more targeted search, an Analyst is simply looking for additional supporting evidence to confirm what is believed or pile on to what is already known - and does not want to eyeball the entire journal for this evidence. By using the '--grep / -g' command-line flag, an Analyst can return only USN records which match a given 'filename' attribute:
 
 ::
 
