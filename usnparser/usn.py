@@ -228,7 +228,7 @@ def main():
         
         elif args.csv:
             print("timestamp,filename,fileattr,reason")
-            
+
         elif args.tln:
             if not args.system:
                 systemname = ""
@@ -242,7 +242,7 @@ def main():
                 u.prettyPrint()
 
             elif args.body:
-                print("0|{0}|{1}-{2}|0|0|0|0|{3}|{3}|{3}|{3}".format(u.filename, u.mftEntryNumber, u.mftSeqNumber, u.epochTimestamp))
+                print("0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}".format(u.filename, u.reason, u.mftEntryNumber, u.mftSeqNumber, u.epochTimestamp))
 
             elif args.tln:
                 print("{0}|USN|{1}||{2}:{3}".format(u.epochTimestamp, systemname, u.filename, u.reason))
