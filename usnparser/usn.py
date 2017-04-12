@@ -33,29 +33,10 @@ def findFirstRecord(infile):
     # Returns a pointer to the first USN record found
     # Modified version of Dave Lassalle's "parseusn.py"
     # https://github.com/sans-dfir/sift-files/blob/master/scripts/parseusn.py
-
     while True:
-        data = infile.read(6553600).lstrip(b"\x00")
-        #data = data.lstrip('\x00')
+        data = infile.read(65536).lstrip(b"\x00")
         if data:
             return infile.tell() - len(data)
-
-
-def findFirstRecordQuick(infile, filesize):
-    # Same as findData(), but initially reads larger swaths of leading
-    # NULL bytes to speed the time it takes to parse a larger journal file
-
-    while True:
-        if infile.tell() + 1073741824 < filesize:
-            infile.seek(1073741824, 1)
-            data = infile.read(6553600)
-            data = data.lstrip(b"\x00")
-
-            if data:
-                infile.seek((-1073741824 + 6553600), 1)
-                return findFirstRecord(infile)
-        else:
-            return findFirstRecord(infile)
 
 
 def findNextRecord(infile, journalSize):
@@ -154,15 +135,8 @@ class Usn(object):
         self.fileNameLength = struct.unpack_from("<H", infile.read(2))[0]
         self.fileNameOffset = struct.unpack_from("<H", infile.read(2))[0]
         filename = struct.unpack("{}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
-        self.filename = filename.decode("UTF-16")
+        self.filename = filename.replace(b"\x00", b"").decode('ascii')
 
-    def convertFileReference(self, buf):
-        b = bytearray(buf)
-        byteString = ""
-
-        for i in b[::-1]:
-            byteString += format(i, 'x')
-        return int(byteString, 16)
 
     def prettyPrint(self):
         record = collections.OrderedDict()
@@ -199,35 +173,29 @@ class Usn(object):
                 attributeList.append(attributeType[i])
         return " ".join(attributeList)
 
+    def convertFileReference(self, buf):
+        b = bytearray(buf)
+        byteString = ""
+
+        for i in b[::-1]:
+            byteString += format(i, 'x')
+        return int(byteString, 16)
+
 
 def main():
     p = ArgumentParser()
     p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-f", "--file", help="Parse the given USN journal file")
-    p.add_argument("-g", "--grep", help="'grep' for a specific file name in a USN record, and only provide records which match")
-    p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
     p.add_argument("-v", "--verbose", help="Return all USN properties for each record (JSON)", action="store_true")
     args = p.parse_args()
 
-    if args.file:
-        if os.path.exists(args.file):
-            journalSize = os.path.getsize(args.file)
-            if args.csv:
-                print("timestamp,filename,fileattr,reason")
-        else:
-            sys.exit("[ - ] File not found at the specified location")
-
     with open(args.file, "rb") as f:
-        if args.quick:
-            if journalSize > 1073741824:
-                dataPointer = findFirstRecordQuick(f, journalSize)
-                f.seek(dataPointer)
-            else:
-                sys.exit("[ - ] The USN journal file must be at least 1GB in size " \
-                         "to use the '--quick' functionality\n[ - ] Exitting...")
-        else:
-            dataPointer = findFirstRecord(f)
-            f.seek(dataPointer)
+        journalSize = os.path.getsize(args.file)
+        dataPointer = findFirstRecord(f)
+        f.seek(dataPointer)
+
+        if args.csv:
+            print("timestamp,filename,fileattr,reason")
 
         while True:
             nextRecord = findNextRecord(f, journalSize)
@@ -239,10 +207,6 @@ def main():
 
             elif args.csv:
                 print("{},{},{},{}".format(u.timestamp, u.filename, u.fileAttributes, u.reason))
-
-            elif args.grep:
-                if args.grep.lower() == u.filename.lower():
-                    print("{} | {} | {} | {}".format(u.timestamp, u.filename, u.fileAttributes,u.reason))
                     
             else:
                 print("{} | {} | {} | {}".format(u.timestamp, u.filename, u.fileAttributes, u.reason))
