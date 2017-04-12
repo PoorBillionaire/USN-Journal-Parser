@@ -38,6 +38,21 @@ def findFirstRecord(infile):
         if data:
             return infile.tell() - len(data)
 
+def findFirstRecordQuick(infile, filesize):
+    # Same as findFirstRecord(), but initially seeks through larger swaths of
+    # NULL bytes to speed the time it takes to parse a larger journal file
+
+    while True:
+        if infile.tell() + 1073741824 < filesize:
+            infile.seek(1073741824, 1)
+            data = infile.read(6553600)
+            data = data.lstrip(b"\x00")
+
+            if data:
+                infile.seek((-1073741824 + 6553600), 1)
+                return findFirstRecord(infile)
+        else:
+            return findFirstRecord(infile)
 
 def findNextRecord(infile, journalSize):
     # There are runs of null bytes between USN records. I'm guessing
@@ -192,6 +207,7 @@ def main():
     p.add_argument("-b", "--body", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-f", "--file", help="Parse the given USN journal file")
+    p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
     p.add_argument("-s", "--system", help="System name (use with -t)")
     p.add_argument("-t", "--tln", help="TLN output (use with -s)", action="store_true")
     p.add_argument("-v", "--verbose", help="Return all USN properties for each record (JSON)", action="store_true")
@@ -202,9 +218,18 @@ def main():
         dataPointer = findFirstRecord(f)
         f.seek(dataPointer)
 
-        if args.csv:
+        if args.quick:
+            if journalSize > 1073741824:
+                dataPointer = findFirstRecordQuick(f, journalSize)
+                f.seek(dataPointer)
+            else:
+                sys.exit("[ - ] The USN journal file must be at least 1GB in size " \
+                         "to use the '--quick' functionality\n[ - ] Exitting...")
+        
+        elif args.csv:
             print("timestamp,filename,fileattr,reason")
-        if args.tln:
+            
+        elif args.tln:
             if not args.system:
                 systemname = ""
 
