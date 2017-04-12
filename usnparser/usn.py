@@ -157,11 +157,11 @@ class Usn(object):
         self.filename = filename.decode("UTF-16")
 
     def convertFileReference(self, buf):
-        byteArray = map(lambda x: '%02x' % ord(x), buf)
+        b = bytearray(buf)
         byteString = ""
 
-        for i in byteArray[::-1]:
-            byteString += i
+        for i in b[::-1]:
+            byteString += format(i, 'x')
         return int(byteString, 16)
 
     def prettyPrint(self):
