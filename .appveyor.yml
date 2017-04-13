@@ -18,7 +18,7 @@ init:
   - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
 
 install:
-  - "%PYTHON%/Scripts/setup.py install"
+  - "%PYTHON%\\Scripts\\setup.py install"
 
 test_script:
-  - "%PYTHON%/tests/tests.py"
+  - "%PYTHON%\\tests\\tests.py"
