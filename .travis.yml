@@ -15,7 +15,7 @@ python:
   - "nightly" # currently points to 3.7-dev
 # command to install dependencies
 install:
-  - "tests/install.sh"
+  - "./tests/install.sh"
   - "python setup.py install"
 # command to run tests
 script: sh tests/tests.sh
