@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/PoorBillionaire/USN-Journal-Parser.svg?branch=master
+    :target: https://travis-ci.org/PoorBillionaire/USN-Journal-Parser
+
 USN-Journal-Parser
 ====================
 Python script to parse the NTFS USN Change Journal
