@@ -1,21 +1,31 @@
 language: python
-os:
-  - linux
-  - osx
-python:
-  - "2.7"
-  - "3.2"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "3.5-dev" # 3.5 development branch
-  - "3.6"
-  - "3.6-dev" # 3.6 development branch
-  - "3.7-dev" # 3.7 development branch
-  - "nightly" # currently points to 3.7-dev
-# command to install dependencies
+matrix:
+    include:
+        # Use the built in venv for linux builds
+        - os: linux
+          sudo: required
+          python:
+            - "2.7"
+            - "3.2"
+            - "3.3"
+            - "3.4"
+            - "3.5"
+            - "3.5-dev" # 3.5 development branch
+            - "3.6"
+            - "3.6-dev" # 3.6 development branch
+            - "3.7-dev" # 3.7 development branch
+            - "nightly" # currently points to 3.7-dev
+        # Use generic language for osx
+        - os: osx
+          language: generic
+
+# Perform the manual steps on osx to install python3 and activate venv
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install python3; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then virtualenv venv -p python3; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then source venv/bin/activate; fi
 install:
-  - "./tests/install.sh"
-  - "python setup.py install"
-# command to run tests
+    - python setup.py install
+# run those tests!
 script: sh tests/tests.sh
