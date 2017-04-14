@@ -4,9 +4,7 @@ Python script to parse the NTFS USN Change Journal
 
 Description
 -------------
-The NTFS USN Change journal is a volume-specific file which logs metadata changes to files. It is a treasure trove of information during a forensic investigation. The change journal is located at $Extend\\$UsnJrnl:$J.
-
-usn.py is a script written in Python which parses the journal's contents, and features a myriad of output formats.
+The NTFS USN Change journal is a volume-specific file which logs metadata changes to files. It is a treasure trove of information during a forensic investigation. The change journal is a named alternate data stream, located at: $Extend\\$UsnJrnl:$J. usn.py is a script written in Python which parses the journal's contents, and features several different output formats.
 
 Default Output
 ----------------
@@ -29,17 +27,18 @@ Command-Line Options
       -f FILE, --file FILE  Parse the given USN journal file
       -q, --quick           Parse a large journal file quickly
       -s SYSTEM, --system SYSTEM
-                        System name (use with -t)
+                            System name (use with -t)
       -t, --tln             TLN output (use with -s)
       -v, --verbose         Return all USN properties for each record (JSON)
 
+
 **--quick**
 
-**Warning: This logic does make (very good) assumptions about the data in question. On the off chance you are experience issues using this functionality just switch back to using usn.py without the --quick flag. Personally, I have never had issues with it.**
+**Note: This logic does make (very good) assumptions about the data in question. On the off chance you are experience issues using this functionality just switch back to using usn.py without the --quick flag. Personally, I have never had issues with it.**
 
 The USN Journal is a Sparse File. Depending on how the file was extracted, it may be bloated with gigabytes of NULL bytes. As such, a parser needs to read through these NULL bytes to find the first valid USN record before it can begin producing results.
 
-Leveraging an interpreted language such as Perl or Python can be a time consuming process if the journal file is large. Using this script, apply the --quick / -q flag to perform this search more quickly: by jumping ahead a gigabyte at a time seeking for valid USN data. Obviously, seeking ahead one gigabyte at a time requires the journal in question to be at least one gigabyte in size. If it isn't, the script will simply produce an error and exit:
+Leveraging an interpreted language such as Perl or Python can be a time consuming process if the journal file is large. Using this script, apply the --quick / -q flag to perform this search more quickly: by seeking ahead one gigabyte at a time until valid USN data is found. In order to seek ahead one gigabyte at a time, the journal in question to be at least one gigabyte in size. If it isn't, the script will simply produce an error and exit:
 
 ::
 
@@ -98,7 +97,7 @@ An example of what this looks like is below:
 
 **--verbose**
 
-Return all USN record members for each record with the --verbose / -v flag. The results are JSON-formatted.
+Return all USN members for each record with the --verbose / -v flag. The results are JSON-formatted.
 
 ::
 
@@ -122,16 +121,35 @@ Return all USN record members for each record with the --verbose / -v flag. The 
         "filename": "WindowsUpdate.log"
     }
 
-**--grep / -g**
+**--body / -b**
 
+Using the --body / -b command-line flag, the script will output in mactime body format:
 
 ::
 
-    dev@computer:~$ python usn.py -f usnjournal --grep test.txt
+    dev@computer:~$ python usn.py -f usnjournal --body
 
-    2016-04-11 00:26:09.324654 | test.txt | ARCHIVE  | FILE_CREATE 
-    2016-04-11 00:26:09.324654 | test.txt | ARCHIVE  | FILE_CREATE CLOSE 
-    2016-04-11 00:26:09.324654 | test.txt | ARCHIVE  | FILE_DELETE CLOSE 
+    0|schedule log.xml (USN: DATA_EXTEND DATA_TRUNCATION CLOSE)|24603-1|0|0|0|0|1491238176|1491238176|1491238176|1491238176
+
+**--tln / -t**
+
+Using the --tln / -t command-line flag, the script will output in TLN body format:
+
+::
+
+    dev@computer:~$ python usn.py -f usnjournal --tln
+
+    1491238176|USN|||schedule log.xml:DATA_EXTEND DATA_TRUNCATION CLOSE
+
+
+Add the --system / -s flag to specify a system name with TLN output:
+
+::
+
+    dev@computer:~$ python usn.py -f usnjournal --tln --system ThisIsASystemName
+
+    1491238176|USN|ThisIsASystemName||schedule log.xml:DATA_EXTEND DATA_TRUNCATION CLOSE
+
 
 Installation
 --------------

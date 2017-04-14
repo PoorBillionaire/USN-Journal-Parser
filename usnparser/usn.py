@@ -231,7 +231,7 @@ def main():
 
         elif args.tln:
             if not args.system:
-                systemname = ""
+                args.system = ""
 
         while True:
             nextRecord = findNextRecord(f, journalSize)
@@ -245,7 +245,7 @@ def main():
                 print("0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}".format(u.filename, u.reason, u.mftEntryNumber, u.mftSeqNumber, u.epochTimestamp))
 
             elif args.tln:
-                print("{0}|USN|{1}||{2}:{3}".format(u.epochTimestamp, systemname, u.filename, u.reason))
+                print("{0}|USN|{1}||{2}:{3}".format(u.epochTimestamp, args.system, u.filename, u.reason))
 
             elif args.csv:
                 print("{0},{1},{2},{3}".format(u.humanTimestamp, u.filename, u.fileAttributes, u.reason))
