@@ -10,7 +10,9 @@ python:
   - "3.6-dev" # 3.6 development branch
   - "3.7-dev" # 3.7 development branch
   - "nightly" # currently points to 3.7-dev
-# command to install dependencies
-install: "python setup.py install"
-# command to run tests
-script: sh tests/tests.sh
+before_install:
+  - sudo apt-get install sleuthkit
+install:
+  - python setup.py install
+script:
+  - sh tests/tests.sh

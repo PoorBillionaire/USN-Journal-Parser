@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-apt-get install sleuthkit
 unzip tests/usnjrnl.zip
 usn.py -h
 usn.py --quick -f usnjrnl.bin
