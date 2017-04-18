@@ -140,8 +140,8 @@ class Usn(object):
 
         self.usn = struct.unpack_from("<Q", infile.read(8))[0]
         self.filetime = struct.unpack_from("<Q", infile.read(8))[0]
-        self.humanTimestamp = self.filetimeToHumanReadable(self.filetime)
         self.epochTimestamp = self.filetimeToEpoch(self.filetime)
+        self.humanTimestamp = self.filetimeToHumanReadable(self.filetime)
         reason = struct.unpack_from("<I", infile.read(4))[0]
         self.reason = self.convertAttributes(self.reasons, reason)
         self.sourceInfo = struct.unpack_from("<I", infile.read(4))[0]
@@ -176,11 +176,17 @@ class Usn(object):
         print(json.dumps(record, indent=4))
 
     def filetimeToHumanReadable(self, filetime):
-        # The USN record's "timestamp" property is a Win32 FILETIME value
-        # This function returns that value in a human-readable format
-        return str(datetime(1601,1,1) + timedelta(microseconds=filetime / 10.))
+        # Borrowed from Willi Ballenthin's parse_usnjrnl.py, which borrowed
+        # from http://integriography.wordpress.com/2010/01/16/using-phython-to-parse-and-present-windows-64-bit-timestamps/
+        # https://github.com/williballenthin/python-ntfs/blob/master/examples/parse_usnjrnl/parse_usnjrnl.py
+        return datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600)
 
-    def filetimeToEpoch(sefl, filetime):
+    def epochToHumanReadable(self, epochTime):
+        s = datetime.fromtimestamp(epochTime // 10000000).strftime('%Y-%m-%d %H:%M:%S')
+        #s += '.' + str(int(epochTime % 1000000000)).zfill(9)
+        return s
+
+    def filetimeToEpoch(self, filetime):
         return int(filetime / 10000000 - 11644473600)
 
 
