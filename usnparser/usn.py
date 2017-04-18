@@ -151,7 +151,7 @@ class Usn(object):
         self.fileNameLength = struct.unpack_from("<H", infile.read(2))[0]
         self.fileNameOffset = struct.unpack_from("<H", infile.read(2))[0]
         filename = struct.unpack("{0}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
-        self.filename = filename.replace(b"\x00", b"").decode('ascii')
+        self.filename = filename.decode('utf16')
 
 
     def prettyPrint(self):
@@ -181,14 +181,8 @@ class Usn(object):
         # https://github.com/williballenthin/python-ntfs/blob/master/examples/parse_usnjrnl/parse_usnjrnl.py
         return datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600)
 
-    def epochToHumanReadable(self, epochTime):
-        s = datetime.fromtimestamp(epochTime // 10000000).strftime('%Y-%m-%d %H:%M:%S')
-        #s += '.' + str(int(epochTime % 1000000000)).zfill(9)
-        return s
-
     def filetimeToEpoch(self, filetime):
         return int(filetime / 10000000 - 11644473600)
-
 
     def convertAttributes(self, attributeType, data):
         # Returns the USN reasons attribute in a human-readable format
