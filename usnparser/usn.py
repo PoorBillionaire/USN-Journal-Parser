@@ -179,7 +179,10 @@ class Usn(object):
         # Borrowed from Willi Ballenthin's parse_usnjrnl.py, which borrowed
         # from http://integriography.wordpress.com/2010/01/16/using-phython-to-parse-and-present-windows-64-bit-timestamps/
         # https://github.com/williballenthin/python-ntfs/blob/master/examples/parse_usnjrnl/parse_usnjrnl.py
-        return datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600)
+        try:
+            return datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600)
+        except ValueError:
+            pass
 
     def filetimeToEpoch(self, filetime):
         return int(filetime / 10000000 - 11644473600)
