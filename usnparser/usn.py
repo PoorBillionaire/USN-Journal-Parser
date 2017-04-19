@@ -150,8 +150,8 @@ class Usn(object):
         self.fileAttributes = self.convertAttributes(self.attributes, fileAttributes)
         self.fileNameLength = struct.unpack_from("<H", infile.read(2))[0]
         self.fileNameOffset = struct.unpack_from("<H", infile.read(2))[0]
-        filename = struct.unpack("{0}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0]
-        self.filename = filename.decode('utf16')
+        filename = struct.unpack("{0}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0].decode("utf16")
+        self.filename = filename.encode("ascii", errors="backslashreplace")
 
 
     def prettyPrint(self):
