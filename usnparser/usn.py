@@ -122,7 +122,7 @@ sourceInfo[0x4] = "REPLICATION_MANAGEMENT"
 
 
 def filetimeToHumanReadable( filetime):
-    # Borrowed from Willi Ballenthin's parse_usnjrnl.py, which borrowed
+    # Borrowed from Willi Ballenthin's parse_usnjrnl.py
     # https://github.com/williballenthin/python-ntfs/blob/master/examples/parse_usnjrnl/parse_usnjrnl.py
     try:
         return str(datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600))
@@ -176,9 +176,6 @@ def parseUsn(infile, usn):
 
 def filenameHandler(infile, recordDict):
     try:
-        #filename = infile.read(recordDict["filenameLength"])
-        #sys.stdout.buffer.write(filename.decode("utf16").encode("utf8"))
-        #exit()
         filename = struct.unpack("<{}s".format(recordDict["filenameLength"]), infile.read(recordDict["filenameLength"]))[0]
         return filename.decode("utf16")
     except UnicodeDecodeError:
@@ -190,39 +187,30 @@ def convertAttributes(attributeType, data):
     return " ".join(attributeList)
 
 
-def printHandler(u):
-    u["filename"] = u["filename"].encode("utf8", errors="backslashreplace")
-    return u
-
-
 def main():
     p = ArgumentParser()
     p.add_argument("-b", "--body", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-f", "--file", help="Parse the given USN journal file")
+    p.add_argument("-o", "--outfile", help="Parse the given USN journal file")
     p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
     p.add_argument("-s", "--system", help="System name (use with -t)")
-    p.add_argument("-t", "--tln", help="TLN output (use with -s)", action="store_true")
+    p.add_argument("-t", "--tln", help="TLN ou2tput (use with -s)", action="store_true")
     p.add_argument("-v", "--verbose", help="Return all USN properties for each record (JSON)", action="store_true")
     args = p.parse_args()
 
     journalSize = os.path.getsize(args.file)
     with open(args.file, "rb") as i:
-        i.seek(findFirstRecord(i))
-
-        while True:
-            nextRecord = findNextRecord(i, journalSize)
-            recordLength = struct.unpack_from("<I", i.read(4))[0]
-            recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
-            u = parseUsn(i, recordData)
-            #u["filename"] = u["filename"].encode("ascii", errors="backslashreplace")
-            #try:
-            u = "{} | {} | {} | {}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
-            sys.stdout.buffer.write(u.encode("utf8"))
-            #except UnicodeEncodeError:
-            #    u["filename"] = u["filename"].encode("ascii", errors="backslashreplace")
-            #    print("{} | {} | {} | {}".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"]))
-            i.seek(nextRecord)
+        with open(args.outfile, "wb") as o:
+            i.seek(findFirstRecord(i))
+            while True:
+                nextRecord = findNextRecord(i, journalSize)
+                recordLength = struct.unpack_from("<I", i.read(4))[0]
+                recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
+                u = parseUsn(i, recordData)
+                u = "{} | {} | {} | {}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
+                o.write(u.encode("utf8", errors="backslashreplace"))
+                i.seek(nextRecord)
 
 if __name__ == '__main__':
     main()
