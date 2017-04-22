@@ -18,11 +18,10 @@
 # Contact: <accidentalassist@gmail.com>
 
 from __future__ import print_function
-
+from __future__ import unicode_literals
 import os
 import sys
 import json
-import time
 import struct
 import collections
 from argparse import ArgumentParser
@@ -37,6 +36,7 @@ def findFirstRecord(infile):
         data = infile.read(65536).lstrip(b"\x00")
         if data:
             return infile.tell() - len(data)
+
 
 def findFirstRecordQuick(infile, filesize):
     # Same as findFirstRecord(), but initially seeks through larger swaths of
@@ -54,6 +54,7 @@ def findFirstRecordQuick(infile, filesize):
         else:
             return findFirstRecord(infile)
 
+
 def findNextRecord(infile, journalSize):
     # There are runs of null bytes between USN records. I'm guessing
     # this is done to ensure that journal records are cluster-aligned
@@ -63,146 +64,135 @@ def findNextRecord(infile, journalSize):
 
     while True:
         try:
-            recordlen = struct.unpack_from("<I", infile.read(4))[0]
-            if recordlen:
+            recordLength = struct.unpack_from("<I", infile.read(4))[0]
+            if recordLength:
                 infile.seek(-4, 1)
-                return (infile.tell() + recordlen)
+                return infile.tell() + recordLength
         except struct.error:
             if infile.tell() >= journalSize:
                 sys.exit()
 
 
-class Usn(object):
-    def __init__(self, infile):
-        self.reasons = collections.OrderedDict()
-        self.reasons[0x1] = "DATA_OVERWRITE"
-        self.reasons[0x2] = "DATA_EXTEND"
-        self.reasons[0x4] = "DATA_TRUNCATION"
-        self.reasons[0x10] = "NAMED_DATA_OVERWRITE"
-        self.reasons[0x20] = "NAMED_DATA_EXTEND"
-        self.reasons[0x40] = "NAMED_DATA_TRUNCATION"
-        self.reasons[0x100] = "FILE_CREATE"
-        self.reasons[0x200] = "FILE_DELETE"
-        self.reasons[0x400] = "EA_CHANGE"
-        self.reasons[0x800] = "SECURITY_CHANGE"
-        self.reasons[0x1000] = "RENAME_OLD_NAME"
-        self.reasons[0x2000] = "RENAME_NEW_NAME"
-        self.reasons[0x4000] = "INDEXABLE_CHANGE"
-        self.reasons[0x8000] = "BASIC_INFO_CHANGE"
-        self.reasons[0x10000] = "HARD_LINK_CHANGE"
-        self.reasons[0x20000] = "COMPRESSION_CHANGE"
-        self.reasons[0x40000] = "ENCRYPTION_CHANGE"
-        self.reasons[0x80000] = "OBJECT_ID_CHANGE"
-        self.reasons[0x100000] = "REPARSE_POINT_CHANGE"
-        self.reasons[0x200000] = "STREAM_CHANGE"
-        self.reasons[0x80000000] = "CLOSE"
+reasons = collections.OrderedDict()
+reasons[0x1] = "DATA_OVERWRITE"
+reasons[0x2] = "DATA_EXTEND"
+reasons[0x4] = "DATA_TRUNCATION"
+reasons[0x10] = "NAMED_DATA_OVERWRITE"
+reasons[0x20] = "NAMED_DATA_EXTEND"
+reasons[0x40] = "NAMED_DATA_TRUNCATION"
+reasons[0x100] = "FILE_CREATE"
+reasons[0x200] = "FILE_DELETE"
+reasons[0x400] = "EA_CHANGE"
+reasons[0x800] = "SECURITY_CHANGE"
+reasons[0x1000] = "RENAME_OLD_NAME"
+reasons[0x2000] = "RENAME_NEW_NAME"
+reasons[0x4000] = "INDEXABLE_CHANGE"
+reasons[0x8000] = "BASIC_INFO_CHANGE"
+reasons[0x10000] = "HARD_LINK_CHANGE"
+reasons[0x20000] = "COMPRESSION_CHANGE"
+reasons[0x40000] = "ENCRYPTION_CHANGE"
+reasons[0x80000] = "OBJECT_ID_CHANGE"
+reasons[0x100000] = "REPARSE_POINT_CHANGE"
+reasons[0x200000] = "STREAM_CHANGE"
+reasons[0x80000000] = "CLOSE"
 
-        self.attributes = collections.OrderedDict()
-        self.attributes[0x1] = "READONLY"
-        self.attributes[0x2] = "HIDDEN"
-        self.attributes[0x4] = "SYSTEM"
-        self.attributes[0x10] = "DIRECTORY"
-        self.attributes[0x20] = "ARCHIVE"
-        self.attributes[0x40] = "DEVICE"
-        self.attributes[0x80] = "NORMAL"
-        self.attributes[0x100] = "TEMPORARY"
-        self.attributes[0x200] = "SPARSE_FILE"
-        self.attributes[0x400] = "REPARSE_POINT"
-        self.attributes[0x800] = "COMPRESSED"
-        self.attributes[0x1000] = "OFFLINE"
-        self.attributes[0x2000] = "NOT_CONTENT_INDEXED"
-        self.attributes[0x4000] = "ENCRYPTED"
-        self.attributes[0x8000] = "INTEGRITY_STREAM"
-        self.attributes[0x10000] = "VIRTUAL"
-        self.attributes[0x20000] = "NO_SCRUB_DATA"
+attributes = collections.OrderedDict()
+attributes[0x1] = "READONLY"
+attributes[0x2] = "HIDDEN"
+attributes[0x4] = "SYSTEM"
+attributes[0x10] = "DIRECTORY"
+attributes[0x20] = "ARCHIVE"
+attributes[0x40] = "DEVICE"
+attributes[0x80] = "NORMAL"
+attributes[0x100] = "TEMPORARY"
+attributes[0x200] = "SPARSE_FILE"
+attributes[0x400] = "REPARSE_POINT"
+attributes[0x800] = "COMPRESSED"
+attributes[0x1000] = "OFFLINE"
+attributes[0x2000] = "NOT_CONTENT_INDEXED"
+attributes[0x4000] = "ENCRYPTED"
+attributes[0x8000] = "INTEGRITY_STREAM"
+attributes[0x10000] = "VIRTUAL"
+attributes[0x20000] = "NO_SCRUB_DATA"
 
-        self.sourceInfo = collections.OrderedDict()
-        self.sourceInfo[0x1] = "DATA_MANAGEMENT"
-        self.sourceInfo[0x2] = "AUXILIARY_DATA"
-        self.sourceInfo[0x4] = "REPLICATION_MANAGEMENT"
-
-        self.usn(infile)
-
-    def usn(self, infile):
-        self.recordLength = struct.unpack_from("<I", infile.read(4))[0]
-        self.majorVersion = struct.unpack_from("<H", infile.read(2))[0]
-        self.minorVersion = struct.unpack_from("<H", infile.read(2))[0]
-
-        if self.majorVersion == 2:
-            self.mftEntryNumber = self.convertFileReference(infile.read(6))
-            self.mftSeqNumber = struct.unpack_from("<H", infile.read(2))[0]
-            self.parentMftEntryNumber = self.convertFileReference(infile.read(6))
-            self.parentMftSeqNumber = struct.unpack_from("<H", infile.read(2))[0]
-
-        elif self.majorVersion == 3:
-            self.referenceNumber = struct.unpack_from("<2Q", infile.read(16))[0]
-            self.pReferenceNumber = struct.unpack_from("<2Q", infile.read(16))[0]
-
-        self.usn = struct.unpack_from("<Q", infile.read(8))[0]
-        self.filetime = struct.unpack_from("<Q", infile.read(8))[0]
-        self.epochTimestamp = self.filetimeToEpoch(self.filetime)
-        self.humanTimestamp = self.filetimeToHumanReadable(self.filetime)
-        reason = struct.unpack_from("<I", infile.read(4))[0]
-        self.reason = self.convertAttributes(self.reasons, reason)
-        self.sourceInfo = struct.unpack_from("<I", infile.read(4))[0]
-        self.securityId = struct.unpack_from("<I", infile.read(4))[0]
-        fileAttributes = struct.unpack_from("<I", infile.read(4))[0]
-        self.fileAttributes = self.convertAttributes(self.attributes, fileAttributes)
-        self.fileNameLength = struct.unpack_from("<H", infile.read(2))[0]
-        self.fileNameOffset = struct.unpack_from("<H", infile.read(2))[0]
-        filename = struct.unpack("{0}s".format(self.fileNameLength), infile.read(self.fileNameLength))[0].decode("utf16")
-        self.filename = filename.encode("ascii", errors="backslashreplace")
+sourceInfo = collections.OrderedDict()
+sourceInfo[0x1] = "DATA_MANAGEMENT"
+sourceInfo[0x2] = "AUXILIARY_DATA"
+sourceInfo[0x4] = "REPLICATION_MANAGEMENT"
 
 
-    def prettyPrint(self):
-        record = collections.OrderedDict()
-        record["recordlen"] = self.recordLength
-        record["majversion"] = self.majorVersion
-        record["minversion"] = self.minorVersion
-        record["mftSequenceNumber"] = self.mftSeqNumber
-        record["mftEntryNumber"] = self.mftEntryNumber
-        record["parentMftSequenceNumber"] = self.parentMftSeqNumber
-        record["parentMftEntryNumber"] = self.parentMftEntryNumber
-        record["usn"] = self.usn
-        record["timestamp"] = self.humanTimestamp
-        record["reason"] = self.reason
-        record["sourceinfo"] = self.sourceInfo
-        record["sid"] = self.securityId
-        record["fileattr"] = self.fileAttributes
-        record["filenamelen"] = self.fileNameLength
-        record["filenameoffset"] = self.fileNameOffset
-        record["filename"] = self.filename
+def filetimeToHumanReadable( filetime):
+    # Borrowed from Willi Ballenthin's parse_usnjrnl.py, which borrowed
+    # https://github.com/williballenthin/python-ntfs/blob/master/examples/parse_usnjrnl/parse_usnjrnl.py
+    try:
+        return str(datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600))
+    except ValueError:
+        pass
 
-        print(json.dumps(record, indent=4))
 
-    def filetimeToHumanReadable(self, filetime):
-        # Borrowed from Willi Ballenthin's parse_usnjrnl.py, which borrowed
-        # from http://integriography.wordpress.com/2010/01/16/using-phython-to-parse-and-present-windows-64-bit-timestamps/
-        # https://github.com/williballenthin/python-ntfs/blob/master/examples/parse_usnjrnl/parse_usnjrnl.py
-        try:
-            return datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600)
-        except ValueError:
-            pass
+def filetimeToEpoch(filetime):
+    return int(filetime / 10000000 - 11644473600)
 
-    def filetimeToEpoch(self, filetime):
-        return int(filetime / 10000000 - 11644473600)
 
-    def convertAttributes(self, attributeType, data):
-        # Returns the USN reasons attribute in a human-readable format
-        attributeList = []
+def convertFileReference(buf):
+    b = bytearray(struct.pack("<Q", buf))
+    seq = struct.unpack("<h", b[6:8])[0]
 
-        for i in attributeType:
-            if i & data:
-                attributeList.append(attributeType[i])
-        return " ".join(attributeList)
+    b = bytearray(b[0:6])
+    byteString = ""
 
-    def convertFileReference(self, buf):
-        b = bytearray(buf)
-        byteString = ""
+    for i in b[::-1]:
+        byteString += format(i, 'x')
+    entry = int(byteString, 16)
 
-        for i in b[::-1]:
-            byteString += format(i, 'x')
-        return int(byteString, 16)
+    return seq, entry
+
+
+def parseUsn(infile, usn):
+    recordProperties = [
+        "majorVersion",
+        "minorVersion",
+        "fileReferenceNumber",
+        "parentFileReferenceNumber",
+        "usn",
+        "timestamp",
+        "reason",
+        "sourceInfo",
+        "securityId",
+        "fileAttributes",
+        "filenameLength",
+        "filenameOffset"
+    ]
+    recordDict = dict(zip(recordProperties, usn))
+    recordDict["filename"] = filenameHandler(infile, recordDict)
+    recordDict["reason"] = convertAttributes(reasons, recordDict["reason"])
+    recordDict["fileAttributes"] = convertAttributes(attributes, recordDict["fileAttributes"])
+    recordDict["humanTimestamp"] = filetimeToHumanReadable(recordDict["timestamp"])
+    recordDict["timestamp"] = filetimeToEpoch(recordDict["timestamp"])
+    recordDict["mftSeqNumber"], recordDict["mftEntryNumber"] = convertFileReference(recordDict["fileReferenceNumber"])
+    recordDict["pMftSeqNumber"], recordDict["pMftEntryNumber"] = convertFileReference(recordDict["parentFileReferenceNumber"])
+    return recordDict
+
+
+def filenameHandler(infile, recordDict):
+    try:
+        #filename = infile.read(recordDict["filenameLength"])
+        #sys.stdout.buffer.write(filename.decode("utf16").encode("utf8"))
+        #exit()
+        filename = struct.unpack("<{}s".format(recordDict["filenameLength"]), infile.read(recordDict["filenameLength"]))[0]
+        return filename.decode("utf16")
+    except UnicodeDecodeError:
+        return ""
+
+
+def convertAttributes(attributeType, data):
+    attributeList = [attributeType[i] for i in attributeType if i & data]
+    return " ".join(attributeList)
+
+
+def printHandler(u):
+    u["filename"] = u["filename"].encode("utf8", errors="backslashreplace")
+    return u
 
 
 def main():
@@ -216,45 +206,25 @@ def main():
     p.add_argument("-v", "--verbose", help="Return all USN properties for each record (JSON)", action="store_true")
     args = p.parse_args()
 
-    with open(args.file, "rb") as f:
-        journalSize = os.path.getsize(args.file)
-        dataPointer = findFirstRecord(f)
-        f.seek(dataPointer)
-
-        if args.quick:
-            if journalSize > 1073741824:
-                dataPointer = findFirstRecordQuick(f, journalSize)
-                f.seek(dataPointer)
-            else:
-                sys.exit("[ - ] The USN journal file must be at least 1GB in size " \
-                         "to use the '--quick' functionality\n[ - ] Exitting...")
-        
-        elif args.csv:
-            print("timestamp,filename,fileattr,reason")
-
-        elif args.tln:
-            if not args.system:
-                args.system = ""
+    journalSize = os.path.getsize(args.file)
+    with open(args.file, "rb") as i:
+        i.seek(findFirstRecord(i))
 
         while True:
-            nextRecord = findNextRecord(f, journalSize)
-            u = Usn(f)
-            f.seek(nextRecord)
-        
-            if args.verbose:
-                u.prettyPrint()
-
-            elif args.body:
-                print("0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}".format(u.filename, u.reason, u.mftEntryNumber, u.mftSeqNumber, u.epochTimestamp))
-
-            elif args.tln:
-                print("{0}|USN|{1}||{2}:{3}".format(u.epochTimestamp, args.system, u.filename, u.reason))
-
-            elif args.csv:
-                print("{0},{1},{2},{3}".format(u.humanTimestamp, u.filename, u.fileAttributes, u.reason))
-                    
-            else:
-                print("{0} | {1} | {2} | {3}".format(u.humanTimestamp, u.filename, u.fileAttributes, u.reason))
+            nextRecord = findNextRecord(i, journalSize)
+            recordLength = struct.unpack_from("<I", i.read(4))[0]
+            recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
+            u = parseUsn(i, recordData)
+            #u["filename"] = u["filename"].encode("ascii", errors="backslashreplace")
+            #try:
+            u = "{} | {} | {} | {}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
+            sys.stdout.buffer.write(u.encode("utf8"))
+            #except UnicodeEncodeError:
+            #    u["filename"] = u["filename"].encode("ascii", errors="backslashreplace")
+            #    print("{} | {} | {} | {}".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"]))
+            i.seek(nextRecord)
 
 if __name__ == '__main__':
     main()
+
+
