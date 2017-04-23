@@ -206,7 +206,7 @@ def main():
                     recordLength = struct.unpack_from("<I", i.read(4))[0]
                     recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
                     u = parseUsn(i, recordData)
-                    u = "0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n".format(u["filename"], u["reason"], u["mftEntryNumber"], u["mftSeqNumber"], u["epochTimestamp"])
+                    u = "0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n".format(u["filename"], u["reason"], u["mftEntryNumber"], u["mftSeqNumber"], u["epochTimestamp"], u["epochTimestamp"], u["epochTimestamp"], u["epochTimestamp"])
                     o.write(u.encode("utf8", errors="backslashreplace"))
                     i.seek(nextRecord)
 
