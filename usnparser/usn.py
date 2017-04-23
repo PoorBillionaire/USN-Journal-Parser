@@ -227,8 +227,9 @@ def main():
                     nextRecord = findNextRecord(i, journalSize)
                     recordLength = struct.unpack_from("<I", i.read(4))[0]
                     recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
-                    u = parseUsn(i, recordData)
-                    o.write(json.dumps(u, indent=4))
+                    u = json.dumps(parseUsn(i, recordData), indent=4, ensure_ascii=False)
+                    o.write(u.encode("utf8", errors="backslashreplace"))
+                    o.write(b"\n")
                     i.seek(nextRecord)
 
             else:            
