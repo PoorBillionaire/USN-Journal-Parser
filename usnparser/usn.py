@@ -179,7 +179,6 @@ def main():
     p.add_argument("-c", "--csv", help="Return USN records in comma-separated format", action="store_true")
     p.add_argument("-f", "--file", help="Parse the given USN journal file")
     p.add_argument("-o", "--outfile", help="Parse the given USN journal file")
-    p.add_argument("-q", "--quick", help="Parse a large journal file quickly", action="store_true")
     p.add_argument("-s", "--system", help="System name (use with -t)")
     p.add_argument("-t", "--tln", help="TLN ou2tput (use with -s)", action="store_true")
     p.add_argument("-v", "--verbose", help="Return all USN properties for each record (JSON)", action="store_true")
@@ -229,8 +228,7 @@ def main():
                     recordLength = struct.unpack_from("<I", i.read(4))[0]
                     recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
                     u = parseUsn(i, recordData)
-                    u = "{} | {} | {} | {}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
-                    o.write(u.encode("utf8", errors="backslashreplace"))
+                    o.write(json.dumps(u, indent=4))
                     i.seek(nextRecord)
 
             else:            
@@ -239,7 +237,7 @@ def main():
                     recordLength = struct.unpack_from("<I", i.read(4))[0]
                     recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
                     u = parseUsn(i, recordData)
-                    u = "{} | {} | {} | {}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
+                    u = "{0} | {1} | {2} | {3}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
                     o.write(u.encode("utf8", errors="backslashreplace"))
                     i.seek(nextRecord)
 
