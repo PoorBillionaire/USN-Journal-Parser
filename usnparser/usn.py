@@ -1,6 +1,5 @@
 #!/usr/bin/python
-
-
+#
 # Copyright 2017 Adam Witt
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +16,7 @@
 #
 # Contact: <accidentalassist@gmail.com>
 
+
 from __future__ import print_function
 from __future__ import unicode_literals
 import os
@@ -26,51 +26,6 @@ import struct
 import collections
 from argparse import ArgumentParser
 from datetime import datetime,timedelta
-
-
-def findFirstRecord(infile):
-    # Returns a pointer to the first USN record found
-    # Modified version of Dave Lassalle's "parseusn.py"
-    # https://github.com/sans-dfir/sift-files/blob/master/scripts/parseusn.py
-    while True:
-        data = infile.read(65536).lstrip(b"\x00")
-        if data:
-            return infile.tell() - len(data)
-
-
-def findFirstRecordQuick(infile, filesize):
-    # Same as findFirstRecord(), but initially seeks through larger swaths of
-    # NULL bytes to speed the time it takes to parse a larger journal file
-
-    while True:
-        if infile.tell() + 1073741824 < filesize:
-            infile.seek(1073741824, 1)
-            data = infile.read(6553600)
-            data = data.lstrip(b"\x00")
-
-            if data:
-                infile.seek((-1073741824 + 6553600), 1)
-                return findFirstRecord(infile)
-        else:
-            return findFirstRecord(infile)
-
-
-def findNextRecord(infile, journalSize):
-    # There are runs of null bytes between USN records. I'm guessing
-    # this is done to ensure that journal records are cluster-aligned
-    # on disk.
-    # This function reads through these null bytes, returning an offset
-    # to the first byte of the the next USN record.
-
-    while True:
-        try:
-            recordLength = struct.unpack_from("<I", infile.read(4))[0]
-            if recordLength:
-                infile.seek(-4, 1)
-                return infile.tell() + recordLength
-        except struct.error:
-            if infile.tell() >= journalSize:
-                sys.exit()
 
 
 reasons = collections.OrderedDict()
@@ -96,6 +51,7 @@ reasons[0x100000] = "REPARSE_POINT_CHANGE"
 reasons[0x200000] = "STREAM_CHANGE"
 reasons[0x80000000] = "CLOSE"
 
+
 attributes = collections.OrderedDict()
 attributes[0x1] = "READONLY"
 attributes[0x2] = "HIDDEN"
@@ -115,10 +71,66 @@ attributes[0x8000] = "INTEGRITY_STREAM"
 attributes[0x10000] = "VIRTUAL"
 attributes[0x20000] = "NO_SCRUB_DATA"
 
+
 sourceInfo = collections.OrderedDict()
 sourceInfo[0x1] = "DATA_MANAGEMENT"
 sourceInfo[0x2] = "AUXILIARY_DATA"
 sourceInfo[0x4] = "REPLICATION_MANAGEMENT"
+
+
+def parseUsn(infile, usn):
+    recordProperties = [
+        "majorVersion",
+        "minorVersion",
+        "fileReferenceNumber",
+        "parentFileReferenceNumber",
+        "usn",
+        "timestamp",
+        "reason",
+        "sourceInfo",
+        "securityId",
+        "fileAttributes",
+        "filenameLength",
+        "filenameOffset"
+    ]
+    recordDict = dict(zip(recordProperties, usn))
+    recordDict["filename"] = filenameHandler(infile, recordDict)
+    recordDict["reason"] = convertAttributes(reasons, recordDict["reason"])
+    recordDict["fileAttributes"] = convertAttributes(attributes, recordDict["fileAttributes"])
+    recordDict["humanTimestamp"] = filetimeToHumanReadable(recordDict["timestamp"])
+    recordDict["epochTimestamp"] = filetimeToEpoch(recordDict["timestamp"])
+    recordDict["timestamp"] = filetimeToEpoch(recordDict["timestamp"])
+    recordDict["mftSeqNumber"], recordDict["mftEntryNumber"] = convertFileReference(recordDict["fileReferenceNumber"])
+    recordDict["pMftSeqNumber"], recordDict["pMftEntryNumber"] = convertFileReference(recordDict["parentFileReferenceNumber"])
+    return recordDict
+
+
+def findFirstRecord(infile):
+    # Returns a pointer to the first USN record found
+    # Modified version of Dave Lassalle's "parseusn.py"
+    # https://github.com/sans-dfir/sift-files/blob/master/scripts/parseusn.py
+    while True:
+        data = infile.read(65536).lstrip(b"\x00")
+        if data:
+            return infile.tell() - len(data)
+
+
+def findNextRecord(infile, journalSize):
+    # There are runs of null bytes between USN records. I'm guessing
+    # this is done to ensure that journal records are cluster-aligned
+    # on disk.
+    # This function reads through these null bytes, returning an offset
+    # to the first byte of the the next USN record.
+
+    while True:
+        try:
+            recordLength = struct.unpack_from("<I", infile.read(4))[0]
+            if recordLength:
+                infile.seek(-4, 1)
+                return infile.tell() + recordLength
+        except struct.error:
+            if infile.tell() >= journalSize:
+                sys.exit()
 
 
 def filetimeToHumanReadable( filetime):
@@ -146,32 +158,6 @@ def convertFileReference(buf):
     entry = int(byteString, 16)
 
     return seq, entry
-
-
-def parseUsn(infile, usn):
-    recordProperties = [
-        "majorVersion",
-        "minorVersion",
-        "fileReferenceNumber",
-        "parentFileReferenceNumber",
-        "usn",
-        "timestamp",
-        "reason",
-        "sourceInfo",
-        "securityId",
-        "fileAttributes",
-        "filenameLength",
-        "filenameOffset"
-    ]
-    recordDict = dict(zip(recordProperties, usn))
-    recordDict["filename"] = filenameHandler(infile, recordDict)
-    recordDict["reason"] = convertAttributes(reasons, recordDict["reason"])
-    recordDict["fileAttributes"] = convertAttributes(attributes, recordDict["fileAttributes"])
-    recordDict["humanTimestamp"] = filetimeToHumanReadable(recordDict["timestamp"])
-    recordDict["timestamp"] = filetimeToEpoch(recordDict["timestamp"])
-    recordDict["mftSeqNumber"], recordDict["mftEntryNumber"] = convertFileReference(recordDict["fileReferenceNumber"])
-    recordDict["pMftSeqNumber"], recordDict["pMftEntryNumber"] = convertFileReference(recordDict["parentFileReferenceNumber"])
-    return recordDict
 
 
 def filenameHandler(infile, recordDict):
@@ -203,14 +189,60 @@ def main():
     with open(args.file, "rb") as i:
         with open(args.outfile, "wb") as o:
             i.seek(findFirstRecord(i))
-            while True:
-                nextRecord = findNextRecord(i, journalSize)
-                recordLength = struct.unpack_from("<I", i.read(4))[0]
-                recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
-                u = parseUsn(i, recordData)
-                u = "{} | {} | {} | {}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
-                o.write(u.encode("utf8", errors="backslashreplace"))
-                i.seek(nextRecord)
+
+            if args.csv:
+                o.write(b"timestamp,filename,fileattr,reason\n")
+                while True:
+                    nextRecord = findNextRecord(i, journalSize)
+                    recordLength = struct.unpack_from("<I", i.read(4))[0]
+                    recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
+                    u = parseUsn(i, recordData)
+                    u = "{0},{1},{2},{3}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
+                    o.write(u.encode("utf8", errors="backslashreplace"))
+                    i.seek(nextRecord)
+
+            elif args.body:
+                while True:
+                    nextRecord = findNextRecord(i, journalSize)
+                    recordLength = struct.unpack_from("<I", i.read(4))[0]
+                    recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
+                    u = parseUsn(i, recordData)
+                    u = "0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n".format(u["filename"], u["reason"], u["mftEntryNumber"], u["mftSeqNumber"], u["epochTimestamp"])
+                    o.write(u.encode("utf8", errors="backslashreplace"))
+                    i.seek(nextRecord)
+
+            elif args.tln:
+                if not args.system:
+                    args.system = ""
+                while True:
+                    nextRecord = findNextRecord(i, journalSize)
+                    recordLength = struct.unpack_from("<I", i.read(4))[0]
+                    recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
+                    u = parseUsn(i, recordData)
+                    u = "{0}|USN|{1}||{2}:{3}\n".format(u["epochTimestamp"], args.system, u["filename"], u["reason"])
+                    o.write(u.encode("utf8", errors="backslashreplace"))
+                    i.seek(nextRecord)
+
+            elif args.verbose:
+                while True:
+                    nextRecord = findNextRecord(i, journalSize)
+                    recordLength = struct.unpack_from("<I", i.read(4))[0]
+                    recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
+                    u = parseUsn(i, recordData)
+                    u = "{} | {} | {} | {}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
+                    o.write(u.encode("utf8", errors="backslashreplace"))
+                    i.seek(nextRecord)
+
+            else:            
+                while True:
+                    nextRecord = findNextRecord(i, journalSize)
+                    recordLength = struct.unpack_from("<I", i.read(4))[0]
+                    recordData = struct.unpack_from("<2H4Q4I2H", i.read(56))
+                    u = parseUsn(i, recordData)
+                    u = "{} | {} | {} | {}\n".format(u["humanTimestamp"], u["filename"], u["fileAttributes"], u["reason"])
+                    o.write(u.encode("utf8", errors="backslashreplace"))
+                    i.seek(nextRecord)
+
 
 if __name__ == '__main__':
     main()
