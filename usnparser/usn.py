@@ -124,7 +124,7 @@ def findNextRecord(infile, journalSize):
 
     while True:
         try:
-            recordLength = struct.unpack_from('<I', infile.read(4))[0]
+            recordLength = struct.unpack_from(str('<I'), infile.read(4))[0]
             if recordLength:
                 infile.seek(-4, 1)
                 return infile.tell() + recordLength
@@ -162,7 +162,7 @@ def convertFileReference(buf):
 
 def filenameHandler(infile, recordDict):
     try:
-        filename = struct.unpack('<{}s'.format(recordDict['filenameLength']), infile.read(recordDict['filenameLength']))[0]
+        filename = struct.unpack_from(str('<{}s'.format(recordDict['filenameLength']), infile.read(recordDict['filenameLength'])))[0]
         return filename.decode('utf16')
     except UnicodeDecodeError:
         return ''
@@ -193,8 +193,8 @@ def main():
                 o.write('timestamp,filename,fileattr,reason\n')
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
-                    recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
+                    recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
+                    recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = parseUsn(i, recordData)
                     u = '{0},{1},{2},{3}\n'.format(u['humanTimestamp'], u['filename'], u['fileAttributes'], u['reason'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
@@ -203,8 +203,8 @@ def main():
             elif args.body:
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
-                    recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
+                    recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
+                    recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = parseUsn(i, recordData)
                     u = '0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n'.format(u['filename'], u['reason'], u['mftEntryNumber'], u['mftSeqNumber'], u['epochTimestamp'], u['epochTimestamp'], u['epochTimestamp'], u['epochTimestamp'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
@@ -215,8 +215,8 @@ def main():
                     args.system = ''
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
-                    recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
+                    recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
+                    recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = parseUsn(i, recordData)
                     u = '{0}|USN|{1}||{2}:{3}\n'.format(u['epochTimestamp'], args.system, u['filename'], u['reason'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
@@ -225,8 +225,8 @@ def main():
             elif args.verbose:
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
-                    recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
+                    recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
+                    recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = json.dumps(parseUsn(i, recordData), indent=4, ensure_ascii=False)
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     o.write('\n')
@@ -235,8 +235,8 @@ def main():
             else:            
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
-                    recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
+                    recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
+                    recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = parseUsn(i, recordData)
                     u = '{0} | {1} | {2} | {3}\n'.format(u['humanTimestamp'], u['filename'], u['fileAttributes'], u['reason'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
