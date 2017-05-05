@@ -147,8 +147,8 @@ def filetimeToEpoch(filetime):
 
 
 def convertFileReference(buf):
-    b = bytearray(struct.pack('<Q', buf))
-    seq = struct.unpack_from('<h', b[6:8])[0]
+    b = bytearray(struct.pack(str('<Q'), buf))
+    seq = struct.unpack_from(str('<h'), b[6:8])[0]
 
     b = bytearray(b[0:6])
     byteString = ''
@@ -236,7 +236,7 @@ def main():
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
                     recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
-                    recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
+                    recordData = struct.unpack_from(str('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
                     u = '{0} | {1} | {2} | {3}\n'.format(u['humanTimestamp'], u['filename'], u['fileAttributes'], u['reason'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
