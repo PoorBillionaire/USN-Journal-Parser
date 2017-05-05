@@ -162,7 +162,7 @@ def convertFileReference(buf):
 
 def filenameHandler(infile, recordDict):
     try:
-        filename = struct.unpack_from(str('<{}s'.format(recordDict['filenameLength']), infile.read(recordDict['filenameLength'])))[0]
+        filename = struct.unpack_from(str('<{}s').format(recordDict['filenameLength']), infile.read(recordDict['filenameLength']))[0]
         return filename.decode('utf16')
     except UnicodeDecodeError:
         return ''
