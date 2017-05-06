@@ -166,7 +166,7 @@ def filetimeToEpoch(filetime):
 
 def convertFileReference(buf):
     b = bytearray(struct.pack("<Q", buf))
-    seq = struct.unpack("<h", b[6:8])[0]
+    seq = struct.unpack_from("<h", b[6:8])[0]
 
     b = bytearray(b[0:6])
     byteString = ""
