@@ -148,8 +148,8 @@ def filetimeToEpoch(filetime):
 
 def convertFileReference(file_reference):
 
-    thing = struct.pack("<Q", file_reference)
-    thing1 = struct.unpack("<H", thing[6:8])
+    thing = struct.pack(str("<Q"), file_reference)
+    thing1 = struct.unpack(str("<H"), thing[6:8])
     print(thing1)
     #print(int(thing[6:8].encode('hex', 16)))
     exit()
