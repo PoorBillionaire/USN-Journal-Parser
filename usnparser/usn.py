@@ -135,7 +135,6 @@ def findNextRecord(infile, journalSize):
 
 def filetimeToHumanReadable( filetime):
     # Borrowed from Willi Ballenthin's parse_usnjrnl.py
-    # https://github.com/williballenthin/python-ntfs/blob/master/examples/parse_usnjrnl/parse_usnjrnl.py
     try:
         return str(datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600))
     except ValueError:
@@ -146,33 +145,15 @@ def filetimeToEpoch(filetime):
     return int(filetime / 10000000 - 11644473600)
 
 
-#def convertFileReference(file_reference):
-#
-#    thing = struct.pack(str("<Q"), file_reference)
-#    thing1 = struct.unpack(str("<H"), thing[6:8])
-#    print(thing1)
-#    #print(int(thing[6:8].encode('hex', 16)))
-#    exit()
-#    print(bytes(file_reference))
-#    exit()
-#    byteArray = map(lambda x: '%02x' % ord(x), buf)
-#
-#    byteString = ""
-#    for i in byteArray[::-1]:
-#        byteString += i
-#    print(int(byteString, 16))
-#    exit()
-#    return int(byteString, 16)
-
 def convertFileReference(buf):
-    b = bytearray(struct.pack("<Q", buf))
+    b = buffer(bytearray(struct.pack("<Q", buf)))
     seq = struct.unpack_from("<h", b[6:8])[0]
 
-    b = bytearray(b[0:6])
-    byteString = ""
+    b = buffer(bytearray(b[0:6]))
+    byteString = ''
 
     for i in b[::-1]:
-        byteString += format(i, 'x')
+        byteString += format(ord(i), 'x')
     entry = int(byteString, 16)
 
     return seq, entry
