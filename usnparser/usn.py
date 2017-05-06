@@ -29,79 +29,79 @@ from datetime import datetime,timedelta
 
 
 reasons = collections.OrderedDict()
-reasons[0x1] = 'DATA_OVERWRITE'
-reasons[0x2] = 'DATA_EXTEND'
-reasons[0x4] = 'DATA_TRUNCATION'
-reasons[0x10] = 'NAMED_DATA_OVERWRITE'
-reasons[0x20] = 'NAMED_DATA_EXTEND'
-reasons[0x40] = 'NAMED_DATA_TRUNCATION'
-reasons[0x100] = 'FILE_CREATE'
-reasons[0x200] = 'FILE_DELETE'
-reasons[0x400] = 'EA_CHANGE'
-reasons[0x800] = 'SECURITY_CHANGE'
-reasons[0x1000] = 'RENAME_OLD_NAME'
-reasons[0x2000] = 'RENAME_NEW_NAME'
-reasons[0x4000] = 'INDEXABLE_CHANGE'
-reasons[0x8000] = 'BASIC_INFO_CHANGE'
-reasons[0x10000] = 'HARD_LINK_CHANGE'
-reasons[0x20000] = 'COMPRESSION_CHANGE'
-reasons[0x40000] = 'ENCRYPTION_CHANGE'
-reasons[0x80000] = 'OBJECT_ID_CHANGE'
-reasons[0x100000] = 'REPARSE_POINT_CHANGE'
-reasons[0x200000] = 'STREAM_CHANGE'
-reasons[0x80000000] = 'CLOSE'
+reasons[0x1] = u'DATA_OVERWRITE'
+reasons[0x2] = u'DATA_EXTEND'
+reasons[0x4] = u'DATA_TRUNCATION'
+reasons[0x10] = u'NAMED_DATA_OVERWRITE'
+reasons[0x20] = u'NAMED_DATA_EXTEND'
+reasons[0x40] = u'NAMED_DATA_TRUNCATION'
+reasons[0x100] = u'FILE_CREATE'
+reasons[0x200] = u'FILE_DELETE'
+reasons[0x400] = u'EA_CHANGE'
+reasons[0x800] = u'SECURITY_CHANGE'
+reasons[0x1000] = u'RENAME_OLD_NAME'
+reasons[0x2000] = u'RENAME_NEW_NAME'
+reasons[0x4000] = u'INDEXABLE_CHANGE'
+reasons[0x8000] = u'BASIC_INFO_CHANGE'
+reasons[0x10000] = u'HARD_LINK_CHANGE'
+reasons[0x20000] = u'COMPRESSION_CHANGE'
+reasons[0x40000] = u'ENCRYPTION_CHANGE'
+reasons[0x80000] = u'OBJECT_ID_CHANGE'
+reasons[0x100000] = u'REPARSE_POINT_CHANGE'
+reasons[0x200000] = u'STREAM_CHANGE'
+reasons[0x80000000] = u'CLOSE'
 
 
 attributes = collections.OrderedDict()
-attributes[0x1] = 'READONLY'
-attributes[0x2] = 'HIDDEN'
-attributes[0x4] = 'SYSTEM'
-attributes[0x10] = 'DIRECTORY'
-attributes[0x20] = 'ARCHIVE'
-attributes[0x40] = 'DEVICE'
-attributes[0x80] = 'NORMAL'
-attributes[0x100] = 'TEMPORARY'
-attributes[0x200] = 'SPARSE_FILE'
-attributes[0x400] = 'REPARSE_POINT'
-attributes[0x800] = 'COMPRESSED'
-attributes[0x1000] = 'OFFLINE'
-attributes[0x2000] = 'NOT_CONTENT_INDEXED'
-attributes[0x4000] = 'ENCRYPTED'
-attributes[0x8000] = 'INTEGRITY_STREAM'
-attributes[0x10000] = 'VIRTUAL'
-attributes[0x20000] = 'NO_SCRUB_DATA'
+attributes[0x1] = u'READONLY'
+attributes[0x2] = u'HIDDEN'
+attributes[0x4] = u'SYSTEM'
+attributes[0x10] = u'DIRECTORY'
+attributes[0x20] = u'ARCHIVE'
+attributes[0x40] = u'DEVICE'
+attributes[0x80] = u'NORMAL'
+attributes[0x100] = u'TEMPORARY'
+attributes[0x200] = u'SPARSE_FILE'
+attributes[0x400] = u'REPARSE_POINT'
+attributes[0x800] = u'COMPRESSED'
+attributes[0x1000] = u'OFFLINE'
+attributes[0x2000] = u'NOT_CONTENT_INDEXED'
+attributes[0x4000] = u'ENCRYPTED'
+attributes[0x8000] = u'INTEGRITY_STREAM'
+attributes[0x10000] = u'VIRTUAL'
+attributes[0x20000] = u'NO_SCRUB_DATA'
 
 
 sourceInfo = collections.OrderedDict()
-sourceInfo[0x1] = 'DATA_MANAGEMENT'
-sourceInfo[0x2] = 'AUXILIARY_DATA'
-sourceInfo[0x4] = 'REPLICATION_MANAGEMENT'
+sourceInfo[0x1] = u'DATA_MANAGEMENT'
+sourceInfo[0x2] = u'AUXILIARY_DATA'
+sourceInfo[0x4] = u'REPLICATION_MANAGEMENT'
 
 
 def parseUsn(infile, usn):
     recordProperties = [
-        'majorVersion',
-        'minorVersion',
-        'fileReferenceNumber',
-        'parentFileReferenceNumber',
-        'usn',
-        'timestamp',
-        'reason',
-        'sourceInfo',
-        'securityId',
-        'fileAttributes',
-        'filenameLength',
-        'filenameOffset'
+        u'majorVersion',
+        u'minorVersion',
+        u'fileReferenceNumber',
+        u'parentFileReferenceNumber',
+        u'usn',
+        u'timestamp',
+        u'reason',
+        u'sourceInfo',
+        u'securityId',
+        u'fileAttributes',
+        u'filenameLength',
+        u'filenameOffset'
     ]
     recordDict = dict(zip(recordProperties, usn))
-    recordDict['filename'] = filenameHandler(infile, recordDict)
-    recordDict['reason'] = convertAttributes(reasons, recordDict['reason'])
-    recordDict['fileAttributes'] = convertAttributes(attributes, recordDict['fileAttributes'])
-    recordDict['humanTimestamp'] = filetimeToHumanReadable(recordDict['timestamp'])
-    recordDict['epochTimestamp'] = filetimeToEpoch(recordDict['timestamp'])
-    recordDict['timestamp'] = filetimeToEpoch(recordDict['timestamp'])
-    recordDict['mftSeqNumber'], recordDict['mftEntryNumber'] = convertFileReference(recordDict['fileReferenceNumber'])
-    recordDict['pMftSeqNumber'], recordDict['pMftEntryNumber'] = convertFileReference(recordDict['parentFileReferenceNumber'])
+    recordDict[u'filename'] = filenameHandler(infile, recordDict)
+    recordDict[u'reason'] = convertAttributes(reasons, recordDict[u'reason'])
+    recordDict[u'fileAttributes'] = convertAttributes(attributes, recordDict[u'fileAttributes'])
+    recordDict[u'humanTimestamp'] = filetimeToHumanReadable(recordDict[u'timestamp'])
+    recordDict[u'epochTimestamp'] = filetimeToEpoch(recordDict[u'timestamp'])
+    recordDict[u'timestamp'] = filetimeToEpoch(recordDict[u'timestamp'])
+    recordDict[u'mftSeqNumber'], recordDict[u'mftEntryNumber'] = convertFileReference(recordDict[u'fileReferenceNumber'])
+    recordDict[u'pMftSeqNumber'], recordDict[u'pMftEntryNumber'] = convertFileReference(recordDict[u'parentFileReferenceNumber'])
     return recordDict
 
 
@@ -146,54 +146,49 @@ def filetimeToEpoch(filetime):
     return int(filetime / 10000000 - 11644473600)
 
 
-def convertFileReference(file_reference):
+#def convertFileReference(file_reference):
+#
+#    thing = struct.pack(str("<Q"), file_reference)
+#    thing1 = struct.unpack(str("<H"), thing[6:8])
+#    print(thing1)
+#    #print(int(thing[6:8].encode('hex', 16)))
+#    exit()
+#    print(bytes(file_reference))
+#    exit()
+#    byteArray = map(lambda x: '%02x' % ord(x), buf)
+#
+#    byteString = ""
+#    for i in byteArray[::-1]:
+#        byteString += i
+#    print(int(byteString, 16))
+#    exit()
+#    return int(byteString, 16)
 
-    thing = struct.pack(str("<Q"), file_reference)
-    thing1 = struct.unpack(str("<H"), thing[6:8])
-    print(thing1)
-    #print(int(thing[6:8].encode('hex', 16)))
-    exit()
-    print(bytes(file_reference))
-    exit()
-    byteArray = map(lambda x: '%02x' % ord(x), buf)
+def convertFileReference(buf):
+    b = bytearray(struct.pack("<Q", buf))
+    seq = struct.unpack("<h", b[6:8])[0]
 
+    b = bytearray(b[0:6])
     byteString = ""
-    for i in byteArray[::-1]:
-        byteString += i
-    print(int(byteString, 16))
-    exit()
-    return int(byteString, 16)
 
-#def convertFileReference(buf):
-    #b = bytearray(struct.pack(str('<Q'), buf))
-#    b = struct.pack(str('<Q'), buf)
-#    b1 = str(b[6:8])
-    #print(b1)
-    #exit(type(b1))
-    #seq = struct.unpack(str('<h'), b[6:8])[0]
-#    seq = struct.unpack(str('<h'), b1)[0]
+    for i in b[::-1]:
+        byteString += format(i, 'x')
+    entry = int(byteString, 16)
 
-#    b = bytearray(b[0:6])
-#    byteString = ''
-
-#    for i in b[::-1]:
-#        byteString += format(i, 'x')
-#    entry = int(byteString, 16)
-
-#    return seq, entry
+    return seq, entry
 
 
 def filenameHandler(infile, recordDict):
     try:
-        filename = struct.unpack_from(str('<{}s').format(recordDict['filenameLength']), infile.read(recordDict['filenameLength']))[0]
+        filename = struct.unpack_from(str('<{}s').format(recordDict[u'filenameLength']), infile.read(recordDict[u'filenameLength']))[0]
         return filename.decode('utf16')
     except UnicodeDecodeError:
-        return ''
+        return u''
 
 
 def convertAttributes(attributeType, data):
     attributeList = [attributeType[i] for i in attributeType if i & data]
-    return ' '.join(attributeList)
+    return u' '.join(attributeList)
 
 
 def main():
@@ -213,13 +208,13 @@ def main():
             i.seek(findFirstRecord(i))
 
             if args.csv:
-                o.write('timestamp,filename,fileattr,reason\n')
+                o.write(u'timestamp,filename,fileattr,reason\n')
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
                     recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
                     recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = parseUsn(i, recordData)
-                    u = '{0},{1},{2},{3}\n'.format(u['humanTimestamp'], u['filename'], u['fileAttributes'], u['reason'])
+                    u = u'{0},{1},{2},{3}\n'.format(u[u'humanTimestamp'], u[u'filename'], u[u'fileAttributes'], u[u'reason'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     i.seek(nextRecord)
 
@@ -229,19 +224,19 @@ def main():
                     recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
                     recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = parseUsn(i, recordData)
-                    u = '0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n'.format(u['filename'], u['reason'], u['mftEntryNumber'], u['mftSeqNumber'], u['epochTimestamp'], u['epochTimestamp'], u['epochTimestamp'], u['epochTimestamp'])
+                    u = u'0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n'.format(u[u'filename'], u[u'reason'], u[u'mftEntryNumber'], u[u'mftSeqNumber'], u[u'epochTimestamp'], u[u'epochTimestamp'], u[u'epochTimestamp'], u[u'epochTimestamp'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     i.seek(nextRecord)
 
             elif args.tln:
                 if not args.system:
-                    args.system = ''
+                    args.system = u''
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
                     recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
                     recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = parseUsn(i, recordData)
-                    u = '{0}|USN|{1}||{2}:{3}\n'.format(u['epochTimestamp'], args.system, u['filename'], u['reason'])
+                    u = u'{0}|USN|{1}||{2}:{3}\n'.format(u[u'epochTimestamp'], args.system, u[u'filename'], u[u'reason'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     i.seek(nextRecord)
 
@@ -252,16 +247,16 @@ def main():
                     recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = json.dumps(parseUsn(i, recordData), indent=4, ensure_ascii=False)
                     o.write(u.encode('utf8', errors='backslashreplace'))
-                    o.write('\n')
+                    o.write(u'\n')
                     i.seek(nextRecord)
 
-            else:            
+            else:
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
                     recordLength = struct.unpack_from(str('<I'), i.read(4))[0]
                     recordData = struct.unpack_from(str('<2H4Q4I2H'), i.read(56))
                     u = parseUsn(i, recordData)
-                    u = '{0} | {1} | {2} | {3}\n'.format(u['humanTimestamp'], u['filename'], u['fileAttributes'], u['reason'])
+                    u = u'{0} | {1} | {2} | {3}\n'.format(u[u'humanTimestamp'], u[u'filename'], u[u'fileAttributes'], u[u'reason'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     i.seek(nextRecord)
 
