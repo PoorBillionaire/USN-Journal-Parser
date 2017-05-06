@@ -18,7 +18,7 @@
 
 
 from __future__ import print_function
-#from __future__ import unicode_literals
+from __future__ import unicode_literals
 import os
 import sys
 import json
@@ -146,18 +146,41 @@ def filetimeToEpoch(filetime):
     return int(filetime / 10000000 - 11644473600)
 
 
-def convertFileReference(buf):
-    b = bytearray(struct.pack(str('<Q'), buf))
-    seq = struct.unpack_from(str('<h'), b[6:8])[0]
+def convertFileReference(file_reference):
 
-    b = bytearray(b[0:6])
-    byteString = ''
+    thing = struct.pack("<Q", file_reference)
+    thing1 = struct.unpack("<H", thing[6:8])
+    print(thing1)
+    #print(int(thing[6:8].encode('hex', 16)))
+    exit()
+    print(bytes(file_reference))
+    exit()
+    byteArray = map(lambda x: '%02x' % ord(x), buf)
 
-    for i in b[::-1]:
-        byteString += format(i, 'x')
-    entry = int(byteString, 16)
+    byteString = ""
+    for i in byteArray[::-1]:
+        byteString += i
+    print(int(byteString, 16))
+    exit()
+    return int(byteString, 16)
 
-    return seq, entry
+#def convertFileReference(buf):
+    #b = bytearray(struct.pack(str('<Q'), buf))
+#    b = struct.pack(str('<Q'), buf)
+#    b1 = str(b[6:8])
+    #print(b1)
+    #exit(type(b1))
+    #seq = struct.unpack(str('<h'), b[6:8])[0]
+#    seq = struct.unpack(str('<h'), b1)[0]
+
+#    b = bytearray(b[0:6])
+#    byteString = ''
+
+#    for i in b[::-1]:
+#        byteString += format(i, 'x')
+#    entry = int(byteString, 16)
+
+#    return seq, entry
 
 
 def filenameHandler(infile, recordDict):
