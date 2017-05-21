@@ -162,7 +162,8 @@ def convertFileReference(buf):
 def filenameHandler(infile, recordDict):
     try:
         filename = struct.unpack_from('<{}s'.format(
-            recordDict[u'filenameLength']),infile.read(recordDict[u'filenameLength']))[0]
+            recordDict[u'filenameLength']),
+            infile.read(recordDict[u'filenameLength']))[0]
         return filename.decode('utf16')
     except UnicodeDecodeError:
         return u''
@@ -196,7 +197,11 @@ def main():
                     recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
-                    u = u'{0},{1},{2},{3}\n'.format(u[u'humanTimestamp'], u[u'filename'], u[u'fileAttributes'], u[u'reason'])
+                    u = u'{0},{1},{2},{3}\n'.format(
+                        u[u'humanTimestamp'],
+                        u[u'filename'],
+                        u[u'fileAttributes'],
+                        u[u'reason'])
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     i.seek(nextRecord)
 
@@ -206,7 +211,16 @@ def main():
                     recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
-                    u = u'0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n'.format(u[u'filename'], u[u'reason'], u[u'mftEntryNumber'], u[u'mftSeqNumber'], u[u'epochTimestamp'], u[u'epochTimestamp'], u[u'epochTimestamp'], u[u'epochTimestamp'])
+                    u = u'0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n'.format(
+                        u[u'filename'],
+                        u[u'reason'],
+                        u[u'mftEntryNumber'],
+                        u[u'mftSeqNumber'],
+                        u[u'epochTimestamp'],
+                        u[u'epochTimestamp'],
+                        u[u'epochTimestamp'],
+                        u[u'epochTimestamp'])
+
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     i.seek(nextRecord)
 
@@ -218,7 +232,12 @@ def main():
                     recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
-                    u = u'{0}|USN|{1}||{2}:{3}\n'.format(u[u'epochTimestamp'], args.system, u[u'filename'], u[u'reason'])
+                    u = u'{0}|USN|{1}||{2}:{3}\n'.format(
+                        u[u'epochTimestamp'],
+                        args.system,
+                        u[u'filename'],
+                        u[u'reason'])
+
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     i.seek(nextRecord)
 
@@ -238,7 +257,12 @@ def main():
                     recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
-                    u = u'{0} | {1} | {2} | {3}\n'.format(u[u'humanTimestamp'], u[u'filename'], u[u'fileAttributes'], u[u'reason'])
+                    u = u'{0} | {1} | {2} | {3}\n'.format(
+                        u[u'humanTimestamp'],
+                        u[u'filename'],
+                        u[u'fileAttributes'],
+                        u[u'reason'])
+
                     o.write(u.encode('utf8', errors='backslashreplace'))
                     i.seek(nextRecord)
 
