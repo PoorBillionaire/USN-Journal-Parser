@@ -129,7 +129,7 @@ Using pip:
 +----------------------------------------------------------------------------------------+
 | Travis-CI                                                                              |
 +========================================================================================+
-|  .. image:: https://travis-ci.org/PoorBillionaire/USN-Journal-Parser.svg?branch=master |
+|  .. image:: https://travis-ci.org/PoorBillionaire/USN-Journal-Parser.svg?branch=dev    |
 |   :target: https://travis-ci.org/PoorBillionaire/USN-Journal-Parser                    |
 +----------------------------------------------------------------------------------------+
 
