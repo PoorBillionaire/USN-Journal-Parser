@@ -146,17 +146,9 @@ def filetimeToEpoch(filetime):
 
 
 def convertFileReference(buf):
-    b = buffer(bytearray(struct.pack("<Q", buf)))
-    seq = struct.unpack_from("<h", b[6:8])[0]
-
-    b = buffer(bytearray(b[0:6]))
-    byteString = ''
-
-    for i in b[::-1]:
-        byteString += format(ord(i), 'x')
-    entry = int(byteString, 16)
-
-    return seq, entry
+    sequenceNumber = (buf >> 48) & 0xFFFF
+    entryNumber = buf & 0xFFFFFFFFFFFF
+    return sequenceNumber, entryNumber
 
 
 def filenameHandler(infile, recordDict):
