@@ -1,24 +1,24 @@
 language:
-- python
+  - python
 dist:
-- trusty
+  - trusty
 python:
-- '2.7'
-- '3.2'
-- '3.3'
-- '3.4'
-- '3.5'
-- 3.5-dev
-- '3.6'
-- 3.6-dev
-- 3.7-dev
-- nightly
+  - '2.7'
+  - '3.2'
+  - '3.3'
+  - '3.4'
+  - '3.5'
+  - 3.5-dev
+  - '3.6'
+  - 3.6-dev
+  - 3.7-dev
+  - nightly
 before_install:
-- sudo apt-get install sleuthkit
+  - sudo apt-get install sleuthkit
 install:
-- sudo python setup.py install
+  - sudo python setup.py install
 script:
-- sh tests/tests.sh
+  - sh tests/tests.sh
 deploy:
   provider: pypi
   user: poorbillionaire
