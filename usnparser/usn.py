@@ -183,7 +183,7 @@ def main():
             i.seek(findFirstRecord(i))
 
             if args.csv:
-                o.write(u'timestamp,filename,fileattr,reason\n')
+                o.write(u'timestamp,filename,fileattr,reason\n'.encode('utf-8', errors='backslashreplace'))
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
                     recordLength = struct.unpack_from('<I', i.read(4))[0]
