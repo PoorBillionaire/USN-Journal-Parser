@@ -14,11 +14,13 @@ python:
   - 3.7-dev
   - nightly
 before_install:
-  - sudo apt-get install python-pip python-setuptools python-wheel sleuthkit twine
+  - sudo apt-get install sleuthkit
 install:
   - sudo python setup.py install
 script:
   - sh tests/tests.sh
+before_deploy:
+  - sudo apt-get install python-pip python-setuptools python-wheel twine
 deploy:
   provider: pypi
   user: poorbillionaire
