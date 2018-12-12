@@ -20,7 +20,6 @@ script:
   - sh tests/tests.sh
 deploy:
   provider: pypi
-  skip_existing: true
   distributions: sdist bdist_wheel
   user: poorbillionaire
   password:
