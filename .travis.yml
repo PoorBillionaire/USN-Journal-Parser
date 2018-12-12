@@ -1,30 +1,38 @@
-language:
-  - python
-dist:
-  - trusty
-python:
-  - '2.7'
-  - '3.2'
-  - '3.3'
-  - '3.4'
-  - '3.5'
-  - 3.5-dev
-  - '3.6'
-  - 3.6-dev
-  - 3.7-dev
-  - nightly
-before_install:
-  - sudo apt-get install sleuthkit
-install:
-  - sudo python setup.py install
-script:
-  - sh tests/tests.sh
-before_deploy:
-  - sudo apt-get install python-pip python-setuptools python-wheel twine
-deploy:
-  provider: pypi
-  user: poorbillionaire
-  password:
-    secure: MQcZ4sM0CHFRIZ+hVKTg4R6ccsWv2gLSQ16UKcqJS07047utfd3KQMRxAymBp1gZ5KM9kJ/v5MynNW6xmAOMTV5QrJY/fwVA31zhQUWoutZxkhOIpX7Pdts9UmxwR+D9B0DX1+ueLsY2VMap9AQ7ar7YDVuKFY24aRdfDwcUaWUI0lRXplp0MEVfwN88eop8ZnJ05d1g9/VRtH0ezIeM227YQyH0Hw1jU2R8zSWHf+dG/U3yVlEAh7vLK5rp8xBvGscKptYVtVYiVoXFDhsepkVKIx2LD5o5IhW6ItbcjQwveUS0KDC3MHeHeCYJu37bUC8MDyF0XrIFiGKpwyrnLAjd3QQn5S+jwV9iU/AiR3Ft+ZAzCk00dlZW7Qp8s6L77UP1z6vgRJfIyNTWaRfvCK+H2EU3Fx91QNnBejkfS3EDV5ydud8evotRH+w+SHTwb6aXKITaZ29xvBhhvQQHqgo45BRPANjrsi4MszQ4+DNdaHqOX1OLemdLpbP3TnRynWqu3AO1HkjnSFT6aQm583N6Z4vx3DYbP2W2GNDDYtL17VEe45oB0xOXOjAzwYHbn1SVCsDvpcZBq7cSPnfAERXCU2xhSX8hqOeR/Dm6dTg8ARPHzMGWSujDYJW38G2Oxk6VovXIQS64P2NUJXRLNFaoq8SEXT1XSxrne13SoJI=
-  on:
-    branch: master
+jobs:
+  include:
+    - stage: test
+      language:
+        - python
+      dist:
+        - trusty
+      python:
+        - '2.7'
+        - '3.2'
+        - '3.3'
+        - '3.4'
+        - '3.5'
+        - 3.5-dev
+        - '3.6'
+        - 3.6-dev
+        - 3.7-dev
+        - nightly
+      before_install:
+        - sudo apt-get install sleuthkit
+      install:
+        - sudo python setup.py install
+      script:
+        - sh tests/tests.sh
+    - stage: deploy
+      before_deploy:
+        - sudo apt-get install python-pip python-setuptools python-wheel twine
+      deploy:
+        provider: pypi
+        user: poorbillionaire
+        password:
+          secure: MQcZ4sM0CHFRIZ+hVKTg4R6ccsWv2gLSQ16UKcqJS07047utfd3KQMRxAymBp1gZ5KM9kJ/v5MynNW6xmAOMTV5QrJY/fwVA31zhQUWoutZxkhOIpX7Pdts9UmxwR+D9B0DX1+ueLsY2VMap9AQ7ar7YDVuKFY24aRdfDwcUaWUI0lRXplp0MEVfwN88eop8ZnJ05d1g9/VRtH0ezIeM227YQyH0Hw1jU2R8zSWHf+dG/U3yVlEAh7vLK5rp8xBvGscKptYVtVYiVoXFDhsepkVKIx2LD5o5IhW6ItbcjQwveUS0KDC3MHeHeCYJu37bUC8MDyF0XrIFiGKpwyrnLAjd3QQn5S+jwV9iU/AiR3Ft+ZAzCk00dlZW7Qp8s6L77UP1z6vgRJfIyNTWaRfvCK+H2EU3Fx91QNnBejkfS3EDV5ydud8evotRH+w+SHTwb6aXKITaZ29xvBhhvQQHqgo45BRPANjrsi4MszQ4+DNdaHqOX1OLemdLpbP3TnRynWqu3AO1HkjnSFT6aQm583N6Z4vx3DYbP2W2GNDDYtL17VEe45oB0xOXOjAzwYHbn1SVCsDvpcZBq7cSPnfAERXCU2xhSX8hqOeR/Dm6dTg8ARPHzMGWSujDYJW38G2Oxk6VovXIQS64P2NUJXRLNFaoq8SEXT1XSxrne13SoJI=
+        on:
+          branch: master
+
+stages:
+  - test
+  - deploy
