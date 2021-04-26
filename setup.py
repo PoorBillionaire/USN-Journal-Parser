@@ -9,7 +9,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='usnparser',
-    version='4.1.4',
+    version='4.1.6',
     description='A Python script to parse the NTFS USN journal',
     long_description=long_description,
     url='https://github.com/PoorBillionaire/USN-Journal-Parser',
@@ -22,7 +22,7 @@ setup(
         'Topic :: Security',
         'License :: OSI Approved :: Apache Software License'
     ],
-
+    python_requires=">=3",
     packages=find_packages(),
     scripts=['usnparser/usn.py']
 )
