@@ -25,7 +25,7 @@ import json
 import struct
 import collections
 from argparse import ArgumentParser
-from datetime import datetime,timedelta
+from datetime import datetime
 
 
 reasons = collections.OrderedDict()
@@ -133,7 +133,7 @@ def findNextRecord(infile, journalSize):
                 sys.exit()
 
 
-def filetimeToHumanReadable( filetime):
+def filetimeToHumanReadable(filetime):
     # Borrowed from Willi Ballenthin's parse_usnjrnl.py
     try:
         return str(datetime.utcfromtimestamp(float(filetime) * 1e-7 - 11644473600))
@@ -159,6 +159,15 @@ def filenameHandler(infile, recordDict):
         return filename.decode('utf16')
     except UnicodeDecodeError:
         return u''
+    # last record can be corrupted (smearing when getting file), silently return an empty filename instead of crashing with:
+    #   File "/tmp/usn.py", line 97, in parseUsn
+    #      recordDict[u'filename'] = filenameHandler(infile, recordDict)
+    #   File "/tmp/usn.py", line 156, in filenameHandler
+    #      filename = struct.unpack_from('<{}s'.format(
+    #   struct.error: unpack_from requires a buffer of at least 18468 bytes for unpacking 18468 bytes at offset 0 (actual buffer size is 4020)
+    # script will exit cleanly in findNextRecord just after, but we can get our data this way anyway
+    except struct.error:
+        return u''
 
 
 def convertAttributes(attributeType, data):
@@ -168,10 +177,10 @@ def convertAttributes(attributeType, data):
 
 def main():
     p = ArgumentParser()
-    p.add_argument('-b', '--body', help='Return USN records in comma-separated format', action='store_true')
+    p.add_argument('-b', '--body', help='Return USN records in body format', action='store_true')
     p.add_argument('-c', '--csv', help='Return USN records in comma-separated format', action='store_true')
     p.add_argument('-f', '--file', help='Parse the given USN journal file', required=True)
-    p.add_argument('-o', '--outfile', help='Parse the given USN journal file', required=True)
+    p.add_argument('-o', '--outfile', help='Output data in the given file', required=True)
     p.add_argument('-s', '--system', help='System name (use with -t)')
     p.add_argument('-t', '--tln', help='TLN ou2tput (use with -s)', action='store_true')
     p.add_argument('-v', '--verbose', help='Return all USN properties for each record (JSON)', action='store_true')
@@ -186,7 +195,7 @@ def main():
                 o.write(u'timestamp,filename,fileattr,reason\n'.encode('utf-8', errors='backslashreplace'))
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
+                    _recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
                     u = u'{0},{1},{2},{3}\n'.format(
@@ -200,7 +209,7 @@ def main():
             elif args.body:
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
+                    _recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
                     u = u'0|{0} (USN: {1})|{2}-{3}|0|0|0|0|{4}|{4}|{4}|{4}\n'.format(
@@ -208,9 +217,6 @@ def main():
                         u[u'reason'],
                         u[u'mftEntryNumber'],
                         u[u'mftSeqNumber'],
-                        u[u'epochTimestamp'],
-                        u[u'epochTimestamp'],
-                        u[u'epochTimestamp'],
                         u[u'epochTimestamp'])
 
                     o.write(u.encode('utf8', errors='backslashreplace'))
@@ -221,7 +227,7 @@ def main():
                     args.system = u''
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
+                    _recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
                     u = u'{0}|USN|{1}||{2}:{3}\n'.format(
@@ -236,17 +242,17 @@ def main():
             elif args.verbose:
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
+                    _recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = json.dumps(parseUsn(i, recordData), indent=4, ensure_ascii=False)
                     o.write(u.encode('utf8', errors='backslashreplace'))
-                    o.write(u'\n')
+                    o.write(u'\n'.encode('utf8'))
                     i.seek(nextRecord)
 
             else:
                 while True:
                     nextRecord = findNextRecord(i, journalSize)
-                    recordLength = struct.unpack_from('<I', i.read(4))[0]
+                    _recordLength = struct.unpack_from('<I', i.read(4))[0]
                     recordData = struct.unpack_from('<2H4Q4I2H', i.read(56))
                     u = parseUsn(i, recordData)
                     u = u'{0} | {1} | {2} | {3}\n'.format(
@@ -261,5 +267,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
