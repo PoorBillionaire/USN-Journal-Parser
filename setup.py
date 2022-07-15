@@ -9,14 +9,15 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='usnparser',
-    version='4.1.6',
-    description='A Python script to parse the NTFS USN journal',
+    version='5.0.0',
+    description='A Python 3 script to parse the NTFS USN journal',
     long_description=long_description,
-    url='https://github.com/PoorBillionaire/USN-Journal-Parser',
-    author='Adam Witt',
-    author_email='accidentalassist@gmail.com',
+    url='https://github.com/digitalsleuth/USN-Journal-Parser',
+    author='Adam Witt, Corey Forman',
+    author_email='corey@digitalsleuth.ca',
     license='Apache Software License',
     classifiers=[
+        'Programming Language :: Python :: 3',
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Information Technology',
         'Topic :: Security',

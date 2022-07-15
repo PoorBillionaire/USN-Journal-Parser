@@ -22,16 +22,22 @@ Command-Line Options
 
 ::
 
+    usage: usn.py [-h] [-b] [-c] -f FILE -o OUTFILE [-s SYSTEM] [-t] [-V] [-v]
+
+    usnparser v5.0.0
+
     optional arguments:
       -h, --help            show this help message and exit
-      -b, --body            Return USN records in comma-separated format
+      -b, --body            Return USN records in body file format
       -c, --csv             Return USN records in comma-separated format
       -f FILE, --file FILE  Parse the given USN journal file
-      -q, --quick           Parse a large journal file quickly
+      -o OUTFILE, --outfile OUTFILE
+                            Output records to given file
       -s SYSTEM, --system SYSTEM
-                            System name (use with -t)
-      -t, --tln             TLN output (use with -s)
-      -v, --verbose         Return all USN properties for each record (JSON)
+                            System hostname (use with -t)
+      -t, --tln             TLN ou2tput (use with -s)
+      -V, --verbose         Return all USN properties for each record (JSON)
+      -v, --version         show program's version number and exit
 
 **--csv**
 
@@ -70,7 +76,7 @@ Using the --tln / -t command-line flag, the script will output in TLN body forma
 
     dev@computer:~$ python usn.py -f usnjournal --tln
 
-    1491238176|USN|||schedule log.xml:DATA_EXTEND DATA_TRUNCATION CLOSE
+    1491238176|USN|||schedule log.xml;DATA_EXTEND DATA_TRUNCATION CLOSE
 
 
 Add the --system / -s flag to specify a system name with TLN output:
@@ -79,7 +85,7 @@ Add the --system / -s flag to specify a system name with TLN output:
 
     dev@computer:~$ python usn.py -f usnjournal --tln --system ThisIsASystemName
 
-    1491238176|USN|ThisIsASystemName||schedule log.xml:DATA_EXTEND DATA_TRUNCATION CLOSE
+    1491238176|USN|ThisIsASystemName||schedule log.xml;DATA_EXTEND DATA_TRUNCATION CLOSE
 
 **--verbose**
 
@@ -91,25 +97,25 @@ Return all USN members for each record with the --verbose / -v flag. The results
     dev@computer:~$cat /tmp/usn.txt
 
     {
-        "majorVersion": 2,
-        "minorVersion": 0,
-        "fileReferenceNumber": 281474976744952,
-        "parentFileReferenceNumber": 844424930165539,
-        "usn": 47265504,
-        "timestamp": 1467312724,
-        "reason": "SECURITY_CHANGE",
+        "filename": "62e4f811156dd101d900000084088c08.Specialize.xml",
+        "humanTimestamp": "2016-02-22 02:02:23.371990",
+        "timestamp": "01d16d1511f8e462",
+        "epochTimestamp": 1456106543371,
+        "usn": 8389448,
+        "fileReferenceNumber": 844424930229305,
+        "parentFileReferenceNumber": 281474976725213,
+        "reason": "DATA_EXTEND FILE_CREATE",
+        "fileAttributes": "ARCHIVE",
+        "mftSeqNumber": 3,
+        "mftEntryNumber": 97337,
+        "pMftSeqNumber": 1,
+        "pMftEntryNumber": 14557,
+        "filenameLength": 94,
+        "filenameOffset": 60,
         "sourceInfo": 0,
         "securityId": 0,
-        "fileAttributes": "HIDDEN SYSTEM ARCHIVE",
-        "filenameLength": 22,
-        "filenameOffset": 60,
-        "filename": "493fde4.rbf",
-        "humanTimestamp": "2016-06-30 18:52:04.456762",
-        "epochTimestamp": 1467312724,
-        "mftSeqNumber": 1,
-        "mftEntryNumber": 34296,
-        "pMftSeqNumber": 3,
-        "pMftEntryNumber": 33571
+        "majorVersion": 2,
+        "minorVersion": 0
     }
 
 Installation
@@ -118,11 +124,11 @@ Using setup.py:
 
 ::
     
-    python setup.py install
+    python3 setup.py install
     
 Using pip:
 
 ::
     
-    pip install usnparser
+    python3 -m pip install usnparser
 
